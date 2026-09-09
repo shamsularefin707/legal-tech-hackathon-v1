@@ -1,18 +1,18 @@
 /**
- * ৫০টি ডেমো মামলার নির্ধারক সিন্থেটিক জেনারেটর (Deterministic 500 Synthetic Cases Generator)
- * Strict distributions across 6 pilot districts, category quotas, priority levels, and SLA statuses.
- * All records include `isDemoData: true`.
+ * ৫০০টি বাস্তবসম্মত সিন্থেটিক মামলার নির্ধারক জেনারেটর (500 Synthetic Cases Generator)
+ * Pilot Geography: 8 Digital Legal-Aid Pilot Districts
+ * Quotas: Women/Family (57%), Land (20%), Criminal (10%), Cybercrime (5%), Bribery Allegations (3%), Other/Labour (5%)
+ * Invariants: filingDate <= registrationDate <= eligibilityDecisionDate <= lawyerRecommendationDate <= lawyerAssignmentDate <= hearingDate <= lastActivityDate <= DEMO_SNAPSHOT_DATE
  */
 
 import {
   LegalAidCase,
+  PanelLawyer,
   CaseCategory,
   CaseStatus,
-  PriorityLevel,
-  PanelLawyer,
-  CaseDeadline,
   HearingRecord,
   TimelineEvent,
+  CaseDeadline,
   CaseDocument,
 } from '../types/legalAid';
 import {
@@ -20,324 +20,39 @@ import {
   COURT_TYPES,
   SeededRandom,
   TOTAL_CASES_TARGET,
+  DEMO_SNAPSHOT_DATE,
 } from './demoConfig';
+import { addDays, daysBetween, formatDateBn } from '../utils/dateUtils';
+import { calculateRisk } from '../services/riskEngine';
+import { calculateCaseSla } from '../services/slaEngine';
+import { deriveHearingStatus } from '../services/hearingEngine';
 
-const FEMALE_NAMES = [
-  'মোছা. নাসরিন আক্তার',
-  'সুমাইয়া রহমান',
-  'ফারহানা পারভীন',
-  'মোছা. শিউলি বেগম',
-  'তাহমিনা চৌধুরী',
-  'সাদিয়া ইসলাম',
-  'রুকসানা খাতুন',
-  'নাজমা বেগম',
-  'মমতাজ বেগম',
-  'মোছা. মরিয়ম আক্তার',
-  'লতিফা হক',
-  'শিরীন সুলতানা',
-  'তাসলিমা জাহান',
-  'খোদেজা বানু',
-  'শাহনাজ পারভীন',
-  'জান্নাতুল ফেরদৌস',
-  'রাবেয়া বসরী',
-  'নূরজাহান আক্তার',
-  'আলেয়া বেগম',
-  'সাবরিনা আক্তার',
+const FEMALE_FIRST_NAMES = [
+  'মোছা. রহিমা', 'ফাতেমা', 'রোকেয়া', 'নাসরিন', 'মরিয়ম', 'সালমা', 'আছিয়া', 'খাদিজা',
+  'রশিদা', 'সুলতানা', 'আলেয়া', 'শাহানাজ', 'হাসনা', 'মনোয়ারা', 'কুলসুম', 'পারভীন',
+  'আমেনা', 'ফিরোজা', 'সবিতা', 'ঝর্ণা', 'রেহানা', 'তাসলিমা', 'নার্গিস', 'শিউলি', 'হালিমা'
 ];
 
-const MALE_NAMES = [
-  'মো. রফিকুল ইসলাম',
-  'মোঃ কামাল হোসেন',
-  'আব্দুর রহিম মিয়া',
-  'মোঃ শহিদুল ইসলাম',
-  'মো. হাবিবুর রহমান',
-  'মোঃ সেলিম রেজা',
-  'মোঃ শাহজাহান আলী',
-  'মো. আনোয়ার হোসেন',
-  'মোঃ জহিরুল হক',
-  'মো. সাইদুল হাসান',
-  'মোঃ মজিবুর রহমান',
-  'মো. আল-আমিন',
-  'মোঃ তোফাজ্জল হোসেন',
-  'মো. নাসির উদ্দিন',
-  'মোঃ মনিরুল ইসলাম',
+const MALE_FIRST_NAMES = [
+  'মো. রফিকুল', 'আব্দুল', 'শফিকুল', 'নুরুল', 'আনিসুর', 'মো. মোস্তফা', 'খায়রুল', 'মোঃ জাহাঙ্গীর',
+  'মিজানুর', 'সাইফুল', 'হারুনুর', 'মো. আমিনুল', 'আব্দুর', 'মো. কামাল', 'মো. সেলিম', 'জহিরুল',
+  'আশরাফুল', 'বিল্লাল', 'মো. জিয়াউল', 'মোকাররম', 'এনামুল', 'মো. মহিউদ্দিন', 'শওকত', 'গোলাম'
+];
+
+const LAST_NAMES = [
+  'বেগম', 'খাতুন', 'আক্তার', 'বানু', 'চৌধুরী', 'ইসলাম', 'মোল্লা', 'ভূঁইয়া', 'মিয়া',
+  'শিকদার', 'হাওলাদার', 'শেখ', 'সরকার', 'খান', 'আহমেদ', 'মজুমদার', 'দেওয়ান', 'তালুকদার',
+  'দাস', 'রায়', 'বর্মন', 'চাকমা', 'মারমা'
+];
+
+const OCCUPATIONS_LOW_INCOME = [
+  'গৃহিণী', 'গৃহকর্মী', 'দিনমজুর', 'কৃষি শ্রমিক', 'ক্ষুদ্র কৃষক', 'রিকশাচালক', 'দোকান কর্মচারী',
+  'তাঁতি', 'মৎস্যজীবী', 'গার্মেন্টস কর্মী', 'হস্তশিল্পী', 'ভ্যানচালক', 'চা শ্রমিক'
 ];
 
 const OPPOSING_NAMES = [
-  'মোঃ তারেক মাহমুদ',
-  'মোঃ দেলোয়ার হোসেন',
-  'বুলবুল আহমেদ',
-  'মো. শফিকুল ইসলাম',
-  'মোখলেছুর রহমান',
-  'মোঃ আলমগীর কবির',
-  'রিয়াজুল ইসলাম',
-  'মোঃ জয়নাল আবেদীন',
-  'কাদের মোল্লা',
-  'মেসার্স সততা হাউজিং',
-  'স্থানীয় প্রভাব বিস্তারকারী পক্ষ',
-  'মো. আশরাফ আলী',
-];
-
-const FEMALE_VULNERABILITIES = [
-  'নারী ও শিশু',
-  'অতি দরিদ্র (মাসিক আয় < ৫০০০ টাকা)',
-  'শারীরিক ও মানসিক সহিংসতার শিকার',
-  'নাবালক সন্তানের একক অভিভাবক',
-  'আর্থিক পরনির্ভরশীল ও গৃহহীনতার ঝুঁকি',
-  'আইনি প্রক্রিয়া ব্যয়ে সম্পূর্ণ অক্ষম',
-  'নিপীড়ক পক্ষের পক্ষ থেকে হুমকি',
-];
-
-const LAND_VULNERABILITIES = [
-  'প্রান্তিক কৃষক ও বসতবাড়ি হারানোর ঝুঁকি',
-  'দরিদ্র পরিবার ও বিধবা নারী সদস্য',
-  'ভুয়া দলিল ও অবৈধ দখলের শিকার',
-  'আদালতের খরচ বহনে অসমর্থ',
-  'উত্তরাধিকার বঞ্চিত',
-];
-
-const GENERAL_VULNERABILITIES = [
-  'হতদরিদ্র দিনমজুর',
-  'আইনগত সহায়তা অশিক্ষিত/অসচেতন',
-  'প্রতিবন্ধী সদস্য পরিবার',
-  'বয়োবৃদ্ধ ও কর্মহীন',
-  'নাবালক সন্তান পরিবার',
-];
-
-interface CaseGenTemplate {
-  category: CaseCategory;
-  caseCategory: string;
-  caseSubcategory: string;
-  isSensitive: boolean;
-  isLand: boolean;
-  isCyber: boolean;
-  isBribery: boolean;
-  legalIssues: string[];
-  reliefSought: string;
-  riskFactors: string[];
-  vulnerabilities: string[];
-}
-
-const TEMPLATES: CaseGenTemplate[] = [
-  // Women / Gender-based / Family (57%)
-  {
-    category: 'WOMEN_CHILD',
-    caseCategory: 'WOMEN_CHILD',
-    caseSubcategory: 'যৌতুক দাবি ও পারিবারিক সহিংসতা',
-    isSensitive: true,
-    isLand: false,
-    isCyber: false,
-    isBribery: false,
-    legalIssues: ['যৌতুক নিরোধ আইন ২০১৮ এর ৩ ধারা', 'পারিবারিক সহিংসতা প্রতিরোধ আইন ২০১০ এর ধারা ৩ ও ৪'],
-    reliefSought: 'পারিবারিক সুরক্ষা আদেশ ও শারীরিক ক্ষতিপূরণ প্রদান।',
-    riskFactors: ['শারীরিক সহিংসতার ধারাবাহিক পুনরাবৃত্তি', 'শিশুর সামনে হুমকি প্রদর্শন', 'বাসস্থান থেকে উচ্ছেদের শঙ্কা'],
-    vulnerabilities: ['নারী ও শিশু', 'শারীরিক ও মানসিক সহিংসতার শিকার', 'নাবালক সন্তানের একক অভিভাবক'],
-  },
-  {
-    category: 'FAMILY',
-    caseCategory: 'FAMILY',
-    caseSubcategory: 'স্ত্রী ও সন্তানের ভরণপোষণ ও দেনমোহর আদায়',
-    isSensitive: true,
-    isLand: false,
-    isCyber: false,
-    isBribery: false,
-    legalIssues: ['পারিবারিক আদালত আইন ২০২৩ এর ৫ ধারা', 'মুসলিম পারিবারিক আইন অধ্যাদেশ ১৯৬১ এর ৯ ধারা'],
-    reliefSought: 'বকেয়া ও মাসিক ভরণপোষণ এবং বাকি দেনমোহর বাবদ পাওনা উদ্ধার।',
-    riskFactors: ['সন্তানের মৌলিক ব্যয় বন্ধ', 'আর্থিক নিঃস্বতার ঝুঁকি', 'আইনি নোটিশ উপেক্ষা'],
-    vulnerabilities: ['অতি দরিদ্র', 'নাবালক সন্তানের অভিভাবক', 'গৃহহীনতার ঝুঁকি'],
-  },
-  {
-    category: 'WOMEN_CHILD',
-    caseCategory: 'WOMEN_CHILD',
-    caseSubcategory: 'যৌন হয়রানি ও পথচারী উত্ত্যক্তকরণ',
-    isSensitive: true,
-    isLand: false,
-    isCyber: false,
-    isBribery: false,
-    legalIssues: ['নারী ও শিশু নির্যাতন দমন আইন ২০০০ এর ১০ ধারা'],
-    reliefSought: 'অপরাধীর বিরুদ্ধে কঠোর আইনি ব্যবস্থা ও আবেদনকারীর ব্যক্তিগত নিরাপত্তা নিশ্চিতকরণ।',
-    riskFactors: ['কর্মক্ষেত্র/শিক্ষা প্রতিষ্ঠানে ক্রমাগত ভীতি প্রদর্শন', 'মানসিক চাপ'],
-    vulnerabilities: ['নারী', 'নিপীড়ক পক্ষের স্থানীয় প্রভাব'],
-  },
-  {
-    category: 'WOMEN_CHILD',
-    caseCategory: 'WOMEN_CHILD',
-    caseSubcategory: 'যৌন সহিংসতা সংক্রান্ত অভিযোগ',
-    isSensitive: true,
-    isLand: false,
-    isCyber: false,
-    isBribery: false,
-    legalIssues: ['নারী ও শিশু নির্যাতন দমন আইন ২০০০ এর ৯(১) ধারা'],
-    reliefSought: 'আইনগত প্রতিকার, বিজ্ঞ আদালতে ট্রায়াল সুরক্ষা ও চিকিৎসা আইনি সহায়তা।',
-    riskFactors: ['ভুক্তভোগীর প্রাণনাশের হুমকি', 'সাক্ষী প্রভাবিত করার চেষ্টা', 'চরম সামাজিক সংকট'],
-    vulnerabilities: ['চরম ট্রমা ও ঝুঁকি', 'সুরক্ষিত ভুক্তভোগী পরিচয়', 'আইনগত নিরাপত্তা অভাব'],
-  },
-  {
-    category: 'FAMILY',
-    caseCategory: 'FAMILY',
-    caseSubcategory: 'নাবালক সন্তানের বৈধ অভিভাবকত্ব ও জিম্মাদারি',
-    isSensitive: true,
-    isLand: false,
-    isCyber: false,
-    isBribery: false,
-    legalIssues: ['গার্ডিয়ানস অ্যান্ড ওয়ার্ডস অ্যাক্ট ১৮৯০ এর ২৫ ধারা'],
-    reliefSought: 'নাবালকের নিরাপত্তা ও মায়ের অনুকূলে সন্তানের জিম্মাদারি বহাল রাখা।',
-    riskFactors: ['সন্তানকে বলপূর্বক ছিনিয়ে নেওয়ার আশঙ্কা', 'সন্তানের স্বাস্থ্য ও নিরাপত্তা সংকট'],
-    vulnerabilities: ['নাবালক সন্তান', 'মা ও শিশুর নিরাপত্তাহীনতা'],
-  },
-  {
-    category: 'FAMILY',
-    caseCategory: 'FAMILY',
-    caseSubcategory: 'বিয়ে বিচ্ছেদ পরবর্তী সুরক্ষা ও পারিবারিক অধিকার',
-    isSensitive: true,
-    isLand: false,
-    isCyber: false,
-    isBribery: false,
-    legalIssues: ['পারিবারিক আদালত আইন ২০২৩', 'মুসলিম বিবাহ বিচ্ছেদ আইন ১৯৩৯'],
-    reliefSought: 'বিচ্ছেদ সংক্রান্ত ন্যায়সংগত নিষ্পত্তি ও নিজস্ব মালামাল ফেরত পাওয়া।',
-    riskFactors: ['আর্থিক সহায় সম্বলহীনতা', 'শ্বশুরবাড়ির পক্ষের ভীতি প্রদর্শন'],
-    vulnerabilities: ['নারী', 'পারিবারিক অভিভাবকহীনতা'],
-  },
-
-  // Land / Property (20%)
-  {
-    category: 'LAND_PROPERTY',
-    caseCategory: 'LAND_PROPERTY',
-    caseSubcategory: 'পৈতৃক বসতভিটা ও কৃষি জমির সীমানা বিরোধ',
-    isSensitive: false,
-    isLand: true,
-    isCyber: false,
-    isBribery: false,
-    legalIssues: ['সুনির্দিষ্ট প্রতিকার আইন ১৮৭৭ এর ৮ ও ৯ ধারা', 'বঙ্গীয় প্রজাস্বত্ব আইন'],
-    reliefSought: 'বেদখলকৃত বসতবাড়ি পুনরুদ্ধার ও শান্তিশৃঙ্খলা বজায় রাখার নিষেধাজ্ঞা আদেশ।',
-    riskFactors: ['জমি জবরদখল ও বলপ্রয়োগ', 'ফসলি জমি বিনষ্ট', 'স্থানীয় সালিশে অবজ্ঞা'],
-    vulnerabilities: ['প্রান্তিক কৃষক ও বসতবাড়ি হারানোর ঝুঁকি', 'দরিদ্র পরিবার'],
-  },
-  {
-    category: 'LAND_PROPERTY',
-    caseCategory: 'LAND_PROPERTY',
-    caseSubcategory: 'ভুয়া আমমোক্তারনামা ও অবৈধ দলিল বাতিল মোকদ্দমা',
-    isSensitive: false,
-    isLand: true,
-    isCyber: false,
-    isBribery: false,
-    legalIssues: ['সুনির্দিষ্ট প্রতিকার আইন ১৮৭৭ এর ৩৯ ধারা', 'রেজিস্ট্রেশন আইন ১৯০৮'],
-    reliefSought: 'জাল দলিল বাতিল ঘোষণা এবং স্বত্ব সাব্যস্তক্রমে দখল বহাল রাখা।',
-    riskFactors: ['তৃতীয় পক্ষের কাছে দ্রুত বিক্রির পাঁয়তারা', 'জালিয়াত চক্রের প্রভাব'],
-    vulnerabilities: ['অসহায় ওয়ারিশান', 'আইনি ব্যয় বহনে অক্ষম'],
-  },
-  {
-    category: 'LAND_PROPERTY',
-    caseCategory: 'LAND_PROPERTY',
-    caseSubcategory: 'উত্তরাধিকার সূত্রে প্রাপ্ত সম্পত্তিতে বাঁটোয়ারা দাবি',
-    isSensitive: false,
-    isLand: true,
-    isCyber: false,
-    isBribery: false,
-    legalIssues: ['বণ্টন আইন ১৮৯৩ (Partition Act)', 'দেওয়ানি কার্যবিধি'],
-    reliefSought: 'সহ-অংশীদারদের মধ্যে সুষম বণ্টনের প্রাথমিক ও চূড়ান্ত ডিক্রি জারি।',
-    riskFactors: ['অন্যান্য অংশীদার কর্তৃক সম্পত্তিতে প্রবেশে বাধা', 'ভাঙচুরের হুমকি'],
-    vulnerabilities: ['নারী ও এতিম উত্তরাধিকারী'],
-  },
-
-  // Violence / Criminal Matters (10%)
-  {
-    category: 'CRIMINAL',
-    caseCategory: 'CRIMINAL',
-    caseSubcategory: 'মারপিট, গুরুতর জখম ও অপরাধমূলক ভীতি প্রদর্শন',
-    isSensitive: false,
-    isLand: false,
-    isCyber: false,
-    isBribery: false,
-    legalIssues: ['দণ্ডবিধি ১৮৬০ এর ৩২৩, ৩২৪, ৩২৫ ও ৫০৬ ধারা'],
-    reliefSought: 'বিচারিক ট্রায়ালে রাষ্ট্রপক্ষের আইনি সহায়তা ও আসামিদের দৃষ্টান্তমূলক শাস্তি।',
-    riskFactors: ['পুনরায় হামলার হুমকি', 'অভিযোগ প্রত্যাহারের অন্যায় চাপ'],
-    vulnerabilities: ['আহত দরিদ্র ভুক্তভোগী', 'চিকিৎসা খরচে নিঃস্ব'],
-  },
-  {
-    category: 'CRIMINAL',
-    caseCategory: 'CRIMINAL',
-    caseSubcategory: 'চুরি, গৃহে অনধিকার প্রবেশ ও মালামাল লুটপাট',
-    isSensitive: false,
-    isLand: false,
-    isCyber: false,
-    isBribery: false,
-    legalIssues: ['দণ্ডবিধি ১৮৬০ এর ৩৮০ ও ৪৪৮ ধারা'],
-    reliefSought: 'লুণ্ঠিত সম্পদ উদ্ধার ও বিজ্ঞ আদালতে বিচার ত্বরান্বিতকরণ।',
-    riskFactors: ['অজ্ঞাতনামা দুষ্কৃতীদের তৎপরতা', 'নিরাপত্তাহীনতা'],
-    vulnerabilities: ['নিঃস্ব পরিবার'],
-  },
-
-  // Cybercrime (5%)
-  {
-    category: 'CRIMINAL',
-    caseCategory: 'CYBERCRIME',
-    caseSubcategory: 'সামাজিক মাধ্যমে ভুয়া আইডি খুলে ব্ল্যাকমেইল ও মানহানি',
-    isSensitive: true,
-    isLand: false,
-    isCyber: true,
-    isBribery: false,
-    legalIssues: ['সাইবার নিরাপত্তা আইন ২০২৩ / ডিজিটাল নিরাপত্তা বিধানাবলী'],
-    reliefSought: 'ডিজিটাল আলামত সংরক্ষণ, ভুয়া অ্যাকাউন্ট নিষ্ক্রিয় ও আসামির বিরুদ্ধে আইনানুগ ব্যবস্থা।',
-    riskFactors: ['ডিজিটাল তথ্য ছড়িয়ে পড়ার ঝুঁকি', 'ব্যক্তিগত সুনাম ক্ষুণ্ণ হওয়া', 'মানসিক চাপ'],
-    vulnerabilities: ['তরুণী শিক্ষার্থী', 'ডিজিটাল ফরেনসিক ব্যয় বহনে অপারগ'],
-  },
-  {
-    category: 'CRIMINAL',
-    caseCategory: 'CYBERCRIME',
-    caseSubcategory: 'অনলাইনে পরিচয় জালিয়াতি ও আর্থিক প্রতারণা',
-    isSensitive: false,
-    isLand: false,
-    isCyber: true,
-    isBribery: false,
-    legalIssues: ['সাইবার আইন ও দণ্ডবিধি ৪২০ ধারা'],
-    reliefSought: 'মোবাইল ফিন্যান্সিয়াল অ্যাকাউন্টের অপব্যবহার রোধ ও ক্ষতিপূরণ উদ্ধার।',
-    riskFactors: ['প্রতারক চক্রের ট্র্যাক হারানো', 'লেনদেন লুকানোর চেষ্টা'],
-    vulnerabilities: ['দরিদ্র গ্রাহক', 'প্রযুক্তিতে অনভিজ্ঞ'],
-  },
-
-  // Bribery / Corruption Allegations (3%)
-  {
-    category: 'CIVIL',
-    caseCategory: 'BRIBERY_CORRUPTION',
-    caseSubcategory: 'সেবা প্রদানে অনৈতিক অর্থ দাবি সংক্রান্ত অভিযোগ',
-    isSensitive: false,
-    isLand: false,
-    isCyber: false,
-    isBribery: true,
-    legalIssues: ['দুর্নীতি প্রতিরোধ সংক্রান্ত আইনগত ধারা ও প্রশাসনিক ট্রাইব্যুনাল প্রতিকার'],
-    reliefSought: 'বিজ্ঞ আদালতের তত্ত্বাবধানে আইনসঙ্গত সেবা প্রাপ্তি ও হয়রানি বন্ধ।',
-    riskFactors: ['প্রশাসনিক ফাইল আটকে রাখার হুমকি', 'প্রতিশোধমূলক হয়রানি'],
-    vulnerabilities: ['প্রান্তিক নাগরিক', 'নিয়মমাফিক সেবা থেকে বঞ্চিত'],
-  },
-
-  // Other Legal Aid (Labour, Consumer Rights, Human Rights - 5%)
-  {
-    category: 'LABOUR',
-    caseCategory: 'LABOUR',
-    caseSubcategory: 'বিনা নোটিশে চাকরিচ্যুতি ও বকেয়া বেতন আদায়',
-    isSensitive: false,
-    isLand: false,
-    isCyber: false,
-    isBribery: false,
-    legalIssues: ['বাংলাদেশ শ্রম আইন ২০০৬ এর ধারা ২৬ ও ৩৩'],
-    reliefSought: 'শ্রম আদালতে বকেয়া মজুরি, সার্ভিস বেনিফিট ও আইনসম্মত ক্ষতিপূরণ উদ্ধার।',
-    riskFactors: ['মালিকপক্ষের গড়িমসি', 'শ্রমিকের বাসাভাড়া ও অন্নের সংকট'],
-    vulnerabilities: ['পোশাক শ্রমিক', 'দৈনন্দিন আয়ের উপর নির্ভরশীল'],
-  },
-  {
-    category: 'CONSUMER_RIGHTS',
-    caseCategory: 'CONSUMER_RIGHTS',
-    caseSubcategory: 'ভেজাল কৃষি কীটনাশক সরবরাহ ও ফসল নষ্টের ক্ষতিপূরণ',
-    isSensitive: false,
-    isLand: false,
-    isCyber: false,
-    isBribery: false,
-    legalIssues: ['ভোক্তা-অধিকার সংরক্ষণ আইন ২০০৯'],
-    reliefSought: 'ক্ষতিপূরণ প্রদান ও অসাধু ব্যবসায়ীর বিরুদ্ধে বিচারিক ব্যবস্থা।',
-    riskFactors: ['মৌসুমি ফসল নষ্ট', 'ঋণখেলাপির ঝুঁকি'],
-    vulnerabilities: ['ক্ষুদ্র চাষী'],
-  },
+  'মো. খলিলুর রহমান', 'জালাল উদ্দিন', 'বজলুর রশীদ', 'মো. সিরাজ মিয়া', 'আশরাফ আলী',
+  'মনিরুল ইসলাম', 'আব্দুল কাদের', 'মেসার্স ডেল্টা ব্রিকস', 'জমির উদ্দিন সর্দার', 'মো. মোবারক হোসেন'
 ];
 
 export function generateSyntheticCases(
@@ -346,434 +61,548 @@ export function generateSyntheticCases(
 ): LegalAidCase[] {
   const cases: LegalAidCase[] = [];
 
-  // Exact target district distribution
-  // Dhaka: 150, Gazipur: 80, Narayanganj: 75, Chattogram: 75, Cumilla: 65, Tangail: 55 = 500 total
-  const districtQuotas: { district: string; count: number; upazilas: string[] }[] =
-    PILOT_DISTRICTS.map((d) => ({
-      district: d.districtBn,
-      count: d.targetCases,
-      upazilas: d.upazilas,
-    }));
+  // Group lawyers by district for fast, referentially sound assignment
+  const lawyersByDistrict: Record<string, PanelLawyer[]> = {};
+  for (const lawyer of lawyers) {
+    if (!lawyersByDistrict[lawyer.district]) {
+      lawyersByDistrict[lawyer.district] = [];
+    }
+    lawyersByDistrict[lawyer.district].push(lawyer);
+  }
 
-  // Target category distribution among 500 cases:
-  // Women / Gender / Family: 285 (57%)
+  // Define Category Quotas for exactly 500 cases:
+  // Women / Family: 285 (57%)
   // Land / Property: 100 (20%)
   // Criminal / Violence: 50 (10%)
   // Cybercrime: 25 (5%)
-  // Bribery / Corruption: 15 (3%)
-  // Other: 25 (5%)
-  // Total = 500 cases.
-  const categoryPlan: ('WOMEN_GENDER' | 'LAND' | 'VIOLENCE' | 'CYBER' | 'BRIBERY' | 'OTHER')[] = [];
-  for (let i = 0; i < 285; i++) categoryPlan.push('WOMEN_GENDER');
-  for (let i = 0; i < 100; i++) categoryPlan.push('LAND');
-  for (let i = 0; i < 50; i++) categoryPlan.push('VIOLENCE');
-  for (let i = 0; i < 25; i++) categoryPlan.push('CYBER');
-  for (let i = 0; i < 15; i++) categoryPlan.push('BRIBERY');
-  for (let i = 0; i < 25; i++) categoryPlan.push('OTHER');
+  // Alleged Bribery: 15 (3%)
+  // Other / Labour / Consumer: 25 (5%)
+  // Sum: 285 + 100 + 50 + 25 + 15 + 25 = 500
+  const categoryPool: { category: CaseCategory; subcat: string; sensitive: boolean }[] = [];
 
-  // Status distribution (500 total):
-  // PENDING_LAWYER_ASSIGNMENT: 30
-  // LAWYER_ASSIGNED: 65
-  // IN_PROGRESS: 195
-  // HEARING_ONGOING: 110
-  // MEDIATION_ONGOING: 35
+  for (let i = 0; i < 285; i++) {
+    const isWc = i % 2 === 0;
+    categoryPool.push({
+      category: isWc ? 'WOMEN_CHILD' : 'FAMILY',
+      subcat: isWc ? 'যৌতুক দাবি ও শারীরিক নির্যাতন' : 'দেনমোহর ও খোরপোষ আদায়',
+      sensitive: true,
+    });
+  }
+  for (let i = 0; i < 100; i++) {
+    categoryPool.push({
+      category: 'LAND_PROPERTY',
+      subcat: 'বসতভিটা বেদখল ও সীমানা বিরোধ',
+      sensitive: false,
+    });
+  }
+  for (let i = 0; i < 50; i++) {
+    categoryPool.push({
+      category: 'CRIMINAL',
+      subcat: 'মিথ্যা চাঁদাবাজি ও মারধরের অভিযোগ',
+      sensitive: false,
+    });
+  }
+  for (let i = 0; i < 25; i++) {
+    categoryPool.push({
+      category: 'HUMAN_RIGHTS',
+      subcat: 'সাইবার হয়রানি ও সামাজিক যোগাযোগ মাধ্যমে মানহানি',
+      sensitive: true,
+    });
+  }
+  for (let i = 0; i < 15; i++) {
+    categoryPool.push({
+      category: 'OTHER',
+      subcat: 'ঘুষ দাবির অভিযোগ (Alleged Bribery & Extortion)',
+      sensitive: false,
+    });
+  }
+  for (let i = 0; i < 25; i++) {
+    categoryPool.push({
+      category: i % 2 === 0 ? 'LABOUR' : 'CONSUMER_RIGHTS',
+      subcat: i % 2 === 0 ? 'বকেয়া মজুরি আদায়' : 'প্রতারণামূলক চুক্তি ভঙ্গ',
+      sensitive: false,
+    });
+  }
+
+  // Shuffle category pool deterministically
+  const shuffledCategories = rng.sample(categoryPool, categoryPool.length);
+
+  // Status Distribution Targets:
   // DISPOSED: 65
-  // Sum = 500
-  const statusPlan: CaseStatus[] = [];
-  for (let i = 0; i < 30; i++) statusPlan.push('PENDING_LAWYER_ASSIGNMENT');
-  for (let i = 0; i < 65; i++) statusPlan.push('LAWYER_ASSIGNED');
-  for (let i = 0; i < 195; i++) statusPlan.push('IN_PROGRESS');
-  for (let i = 0; i < 110; i++) statusPlan.push('HEARING_ONGOING');
-  for (let i = 0; i < 35; i++) statusPlan.push('MEDIATION_ONGOING');
-  for (let i = 0; i < 65; i++) statusPlan.push('DISPOSED');
+  // LAWYER_PENDING / REGISTERED: 25
+  // HEARING_SCHEDULED: 80
+  // ONGOING / IN_PROGRESS: 270
+  // AWAITING_RESOLUTION: 35
+  // OVERDUE / ESCALATED: 25
+  // Sum = 65 + 25 + 80 + 270 + 35 + 25 = 500
+  const statusPool: CaseStatus[] = [];
+  for (let i = 0; i < 65; i++) statusPool.push('DISPOSED');
+  for (let i = 0; i < 25; i++) statusPool.push('LAWYER_PENDING');
+  for (let i = 0; i < 80; i++) statusPool.push('HEARING_SCHEDULED');
+  for (let i = 0; i < 270; i++) statusPool.push('ONGOING');
+  for (let i = 0; i < 35; i++) statusPool.push('AWAITING_RESOLUTION');
+  for (let i = 0; i < 25; i++) statusPool.push('OVERDUE');
 
-  // Priority distribution:
-  // VERY_HIGH: 40 (8%)
-  // HIGH: 125 (25%)
-  // MEDIUM: 225 (45%)
-  // LOW: 110 (22%)
-  // Sum = 500
-  const priorityPlan: PriorityLevel[] = [];
-  for (let i = 0; i < 40; i++) priorityPlan.push('VERY_HIGH');
-  for (let i = 0; i < 125; i++) priorityPlan.push('HIGH');
-  for (let i = 0; i < 225; i++) priorityPlan.push('MEDIUM');
-  for (let i = 0; i < 110; i++) priorityPlan.push('LOW');
+  const shuffledStatuses = rng.sample(statusPool, statusPool.length);
 
-  // SLA status plan:
-  // BREACHED: 32 (6.4%)
-  // APPROACHING_RISK: 65 (13%)
-  // NORMAL: 403 (80.6%)
-  const slaPlan: ('BREACHED' | 'APPROACHING_RISK' | 'NORMAL')[] = [];
-  for (let i = 0; i < 32; i++) slaPlan.push('BREACHED');
-  for (let i = 0; i < 65; i++) slaPlan.push('APPROACHING_RISK');
-  for (let i = 0; i < 403; i++) slaPlan.push('NORMAL');
-
-  // Pre-shuffle plans using seeded random
-  const shuffledCategoryPlan = rng.sample(categoryPlan, categoryPlan.length);
-  const shuffledStatusPlan = rng.sample(statusPlan, statusPlan.length);
-  const shuffledPriorityPlan = rng.sample(priorityPlan, priorityPlan.length);
-  const shuffledSlaPlan = rng.sample(slaPlan, slaPlan.length);
-
-  let caseCounter = 1;
-
-  for (const distConfig of districtQuotas) {
-    const districtLawyers = lawyers.filter((l) => l.district === distConfig.district);
-
-    for (let c = 0; c < distConfig.count; c++) {
-      const globalIndex = caseCounter - 1;
-      const categoryType = shuffledCategoryPlan[globalIndex] || 'WOMEN_GENDER';
-      const status = shuffledStatusPlan[globalIndex] || 'IN_PROGRESS';
-      const priority = shuffledPriorityPlan[globalIndex] || 'MEDIUM';
-      const slaStatus = shuffledSlaPlan[globalIndex] || 'NORMAL';
-
-      // Pick matching template
-      let matchedTemplates = TEMPLATES.filter((t) => {
-        if (categoryType === 'WOMEN_GENDER')
-          return t.category === 'WOMEN_CHILD' || t.category === 'FAMILY';
-        if (categoryType === 'LAND') return t.category === 'LAND_PROPERTY';
-        if (categoryType === 'VIOLENCE') return t.category === 'CRIMINAL' && !t.isCyber;
-        if (categoryType === 'CYBER') return t.isCyber;
-        if (categoryType === 'BRIBERY') return t.isBribery;
-        return t.category === 'LABOUR' || t.category === 'CONSUMER_RIGHTS';
+  // Distribute exactly across the 8 pilot districts:
+  // Rajbari: 65, Habiganj: 65, Barguna: 65, Netrokona: 65
+  // Joypurhat: 60, Thakurgaon: 60, Jhenaidah: 60, Khagrachhari: 60
+  // Total: 500 cases!
+  const districtDistribution: { districtBn: string; districtEn: string; upazilas: string[] }[] = [];
+  for (const pilot of PILOT_DISTRICTS) {
+    for (let count = 0; count < pilot.targetCases; count++) {
+      districtDistribution.push({
+        districtBn: pilot.districtBn,
+        districtEn: pilot.districtEn,
+        upazilas: pilot.upazilas,
       });
-      if (matchedTemplates.length === 0) matchedTemplates = [TEMPLATES[0]];
-      const template = rng.pick(matchedTemplates);
-
-      const upazila = rng.pick(distConfig.upazilas);
-      const courtType = rng.pick(COURT_TYPES);
-
-      // Dedicated flagship cases retaining known IDs
-      let caseId = `LA-DEMO-2026-${String(caseCounter).padStart(4, '0')}`;
-      if (caseCounter === 1) caseId = 'case-1284'; // Flagship case in Dhaka
-      else if (caseCounter === 2) caseId = 'case-1219'; // Stale case in Gazipur
-      else if (caseCounter === 3) caseId = 'case-1190'; // SLA overdue case in Narayanganj
-
-      const isFemale =
-        categoryType === 'WOMEN_GENDER' ||
-        template.category === 'WOMEN_CHILD' ||
-        rng.next() < 0.65;
-      const applicantName = isFemale ? rng.pick(FEMALE_NAMES) : rng.pick(MALE_NAMES);
-      const opposingName = rng.pick(OPPOSING_NAMES);
-
-      // Masked identifiers
-      const nidEnd = String(rng.nextInt(1000, 9999));
-      const phoneEnd = String(rng.nextInt(10, 99));
-      const nidMasked = `*********${nidEnd}`;
-      const phoneMasked = `017******${phoneEnd}`;
-
-      // Display name protection for sensitive cases
-      const isHighlySensitive =
-        template.isSensitive ||
-        template.caseSubcategory.includes('যৌন') ||
-        template.caseSubcategory.includes('সহিংসতা') ||
-        priority === 'VERY_HIGH';
-
-      const applicantDisplayName = isHighlySensitive
-        ? `ডেমো আবেদনকারী ${String(caseCounter).padStart(3, '0')} (সুরক্ষিত)`
-        : `ডেমো আবেদনকারী ${String(caseCounter).padStart(3, '0')} (${applicantName.split(' ')[0]})`;
-
-      // Assign lawyer if appropriate
-      let assignedLawyer: PanelLawyer | undefined = undefined;
-      if (status !== 'PENDING_LAWYER_ASSIGNMENT' && districtLawyers.length > 0) {
-        // Prefer lawyer with matching specialization
-        const matchingLawyers = districtLawyers.filter((l) =>
-          l.specialisations.includes(template.category)
-        );
-        assignedLawyer =
-          matchingLawyers.length > 0 ? rng.pick(matchingLawyers) : rng.pick(districtLawyers);
-      }
-
-      // Risk score calculation (20 - 99)
-      let calculatedRiskScore = 45;
-      if (priority === 'VERY_HIGH') calculatedRiskScore = rng.nextInt(85, 99);
-      else if (priority === 'HIGH') calculatedRiskScore = rng.nextInt(70, 84);
-      else if (priority === 'MEDIUM') calculatedRiskScore = rng.nextInt(45, 69);
-      else calculatedRiskScore = rng.nextInt(20, 44);
-
-      if (slaStatus === 'BREACHED') calculatedRiskScore = Math.min(99, calculatedRiskScore + 10);
-
-      // Deadlines & SLA
-      const daysSinceActivity =
-        caseCounter === 2 // case-1219 is specifically stale
-          ? 18
-          : slaStatus === 'BREACHED'
-          ? rng.nextInt(15, 32)
-          : slaStatus === 'APPROACHING_RISK'
-          ? rng.nextInt(7, 13)
-          : rng.nextInt(1, 6);
-
-      const daysWithoutActivity = daysSinceActivity;
-
-      const deadlines: CaseDeadline[] = [];
-      const deadlinesCount = rng.nextInt(1, 3);
-      for (let d = 0; d < deadlinesCount; d++) {
-        const isOverdue = slaStatus === 'BREACHED' && d === 0;
-        const daysRem = isOverdue
-          ? -rng.nextInt(1, 10)
-          : slaStatus === 'APPROACHING_RISK' && d === 0
-          ? rng.nextInt(1, 3)
-          : rng.nextInt(4, 25);
-
-        const dueDay = Math.max(1, (11 + daysRem) % 28);
-        deadlines.push({
-          id: `dl-${caseCounter}-${d + 1}`,
-          title:
-            d === 0
-              ? 'আইনজীবী কর্তৃক অন্তর্বর্তীকালীন আবেদন / জবাব দাখিল'
-              : 'বিজ্ঞ আদালতের তলবকৃত নথিপত্র উপস্থাপন',
-          dueDate: `${dueDay} সেপ্টেম্বর ২০২৬`,
-          daysRemaining: daysRem,
-          category:
-            isOverdue
-              ? 'OVERDUE'
-              : daysRem <= 3
-              ? 'URGENT'
-              : daysRem <= 7
-              ? 'WITHIN_7_DAYS'
-              : 'AT_RISK',
-          assignedOfficer: 'জেলা লিগ্যাল এইড অফিসার',
-          assignedLawyer: assignedLawyer?.name,
-          status: isOverdue ? 'OVERDUE' : 'PENDING',
-          actionRequired: isOverdue
-            ? 'জরুরি নোটিশ জারি ও ব্যাখ্যা তলব'
-            : 'নথি প্রস্তুতকরণ ও আদালতে দাখিল',
-        });
-      }
-
-      // Hearings
-      const hearings: HearingRecord[] = [];
-      if (status === 'HEARING_ONGOING' || status === 'IN_PROGRESS') {
-        hearings.push({
-          id: `hear-${caseCounter}-1`,
-          date: `${rng.nextInt(12, 28)} সেপ্টেম্বর ২০২৬`,
-          time: '১০:৩০ পূর্বাহ্ণ',
-          courtName: `${distConfig.district} জেলা আদালত`,
-          benchCourtNumber: 'আদালত কক্ষ নং ০৩',
-          judgeName: 'বিজ্ঞ বিচারক',
-          purpose: 'চার্জ গঠন / অন্তর্বর্তীকালীন সুরক্ষা আদেশ শুনানি',
-          status: 'নির্ধারিত',
-          courtOutcomeSummary: 'শুনানি অব্যাহত রয়েছে',
-          nextDate: '২৯ সেপ্টেম্বর ২০২৬',
-        });
-      }
-
-      // Timeline events
-      const timeline: TimelineEvent[] = [
-        {
-          id: `tl-${caseCounter}-1`,
-          date: '০১ আগস্ট ২০২৬',
-          time: '১০:০০ ঘটিকা',
-          user: 'মো. সাইদুল ইসলাম',
-          role: 'বেঞ্চ সহকারী',
-          action: 'আবেদন নিবন্ধন সম্পন্ন',
-          description: 'আবেদনকারীর আর্থসামাজিক অবস্থা ও এনআইডি রেকর্ড যাচাইপূর্বক তালিকাভুক্ত।',
-          isOfficialRecord: true,
-        },
-      ];
-
-      if (assignedLawyer) {
-        timeline.push({
-          id: `tl-${caseCounter}-2`,
-          date: '০৮ আগস্ট ২০২৬',
-          time: '১১:৩০ ঘটিকা',
-          user: 'মো. মাহবুবুর রহমান',
-          role: 'সিনিয়র সহকারী জজ',
-          action: 'প্যানেল আইনজীবী নিয়োগ অনুমোদন',
-          description: `দায়িত্বপ্রাপ্ত আইনজীবী: ${assignedLawyer.name} (${assignedLawyer.barRegNo})`,
-          isOfficialRecord: true,
-        });
-      }
-
-      // Documents
-      const documents: CaseDocument[] = [
-        {
-          id: `doc-${caseCounter}-app`,
-          title: 'আইনগত সহায়তা আবেদনপত্র ও হলফনামা',
-          category: 'APPLICATION',
-          fileName: `application_${caseCounter}.pdf`,
-          fileSizeBytes: 420000,
-          uploadedAt: '০২ আগস্ট ২০২৬',
-          uploadedBy: 'ফ্রন্ট ডেস্ক সহকারী',
-          mimeType: 'application/pdf',
-          securityHash: `sha256-demo-${caseCounter}app`,
-          isRestricted: false,
-          accessCount: rng.nextInt(1, 5),
-        },
-      ];
-
-      if (template.isSensitive && caseCounter === 1) {
-        // Retain the specific nikahnama document for case-1284
-        documents.push({
-          id: 'doc-4',
-          title: 'নিকাহনামা ও কাবিননামা দলিল (সংবেদনশীল)',
-          category: 'IDENTITY',
-          fileName: 'nikahnama_certified_copy.pdf',
-          fileSizeBytes: 1250000,
-          uploadedAt: '০৪ সেপ্টেম্বর ২০২৬',
-          uploadedBy: 'ফ্রন্ট ডেস্ক সহকারী',
-          mimeType: 'application/pdf',
-          securityHash: 'sha256-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-          isRestricted: true,
-          accessCount: 3,
-        });
-      }
-
-      // Domain-specific fields
-      let propertyType: 'Agricultural' | 'Residential' | 'Commercial' | 'Inherited property' | 'Government/claimed public land' | undefined = undefined;
-      if (template.isLand) {
-        propertyType = rng.pick([
-          'Agricultural',
-          'Residential',
-          'Inherited property',
-          'Commercial',
-        ]);
-      }
-
-      const caseDescription = template.isSensitive
-        ? template.caseSubcategory.includes('যৌন')
-          ? 'Synthetic case involving an allegation of sexual violence. Detailed facts intentionally omitted from demo dataset.'
-          : `${template.caseSubcategory} বিষয়ে আইনি প্রতিকার ও পারিবারিক সুরক্ষা চেয়ে দাখিলকৃত আবেদন।`
-        : template.isBribery
-        ? 'Allegation of demanding unlawful gratification during municipal trade license renewal. Stated as reported allegation pending formal judicial verification.'
-        : `${distConfig.district} জেলার ${upazila} এলাকায় সংঘটিত ${template.caseSubcategory} সংক্রান্ত আইনি বিরোধ।`;
-
-      const generatedCase: LegalAidCase = {
-        id: caseId,
-        isDemoData: true,
-        caseNumber: caseId.startsWith('case-')
-          ? `LA-DEMO-2026-00${caseId.replace('case-', '')}`
-          : caseId,
-        courtCaseNumber: `নালিশী মোকদ্দমা নং ${rng.nextInt(100, 990)}/২০২৬`,
-        courtName: `${distConfig.district} ${courtType}`,
-        courtType,
-        district: distConfig.district,
-        upazila,
-        category: template.category,
-        status,
-        priorityAssessment: {
-          calculatedPriority: priority,
-          score:
-            priority === 'VERY_HIGH'
-              ? 92
-              : priority === 'HIGH'
-              ? 78
-              : priority === 'MEDIUM'
-              ? 55
-              : 30,
-          factors: [
-            {
-              title: template.isSensitive
-                ? 'শারীরিক ও সামাজিক নিরাপত্তার ঝুঁকি'
-                : 'আর্থিক সংকট ও জীবিকা অনিশ্চয়তা',
-              impact: 'POSITIVE',
-              description: template.isSensitive
-                ? 'আবেদনকারীর উপর শারীরিক নির্যাতনের আশঙ্কা ও জরুরি সুরক্ষা আদেশ প্রয়োজন।'
-                : 'নিয়মিত আয়ের উৎস নেই এবং আইনি ফি বহনে সম্পূর্ণ অসমর্থ।',
-            },
-            {
-              title: isFemale
-                ? 'নারী ও প্রান্তিক জনগোষ্ঠীর আইনি সুরক্ষা'
-                : 'দীর্ঘমেয়াদী বিরোধ নিষ্পত্তি অগ্রাধিকার',
-              impact: 'POSITIVE',
-              description: 'দ্রুত বিচারিক সহায়তার মাধ্যমে নাগরিক প্রতিকার নিশ্চিতকরণ।',
-            },
-          ],
-        },
-        assignedOfficerName: 'মো. মাহবুবুর রহমান (সিনিয়র সহকারী জজ)',
-        assignedLawyerId: assignedLawyer?.id || null,
-        assignedLawyerName: assignedLawyer?.name,
-        assignedLawyerBarNo: assignedLawyer?.barRegNo,
-        applicationDate: `${rng.nextInt(1, 28)} জুলাই ২০২৬`,
-        assignedDate: assignedLawyer ? '০৮ আগস্ট ২০২৬' : undefined,
-        nextHearingDate: hearings[0]?.date,
-        deadlines,
-        hearings,
-        timeline,
-        documents,
-        summary: caseDescription,
-        legalIssues: template.legalIssues,
-        reliefSought: template.reliefSought,
-        lastActivityDate: `${Math.max(1, 10 - daysSinceActivity)} সেপ্টেম্বর ২০২৬`,
-        daysWithoutActivity,
-        daysSinceLastActivity: daysSinceActivity,
-        mediationAttempted: status === 'MEDIATION_ONGOING',
-        mediationOutcome:
-          status === 'MEDIATION_ONGOING' ? 'উভয় পক্ষের উপস্থিতিতে প্রাথমিক শুনানি চলছে' : undefined,
-
-        // Structured synthetic attributes
-        caseCategory: template.caseCategory,
-        caseSubcategory: template.caseSubcategory,
-        description: caseDescription,
-        applicantName,
-        applicantDisplayName,
-        applicantGender: isFemale ? 'নারী' : 'পুরুষ',
-        applicantAgeBand: rng.pick(['১৮-২৫', '২৬-৩৫', '৩৬-৫০', '৫১+']),
-        vulnerabilityFactors: template.vulnerabilities,
-        priorityLevel: priority,
-        riskScore: calculatedRiskScore,
-        riskFactors: template.riskFactors,
-        filingStage:
-          status === 'PENDING_LAWYER_ASSIGNMENT'
-            ? 'আইনজীবী নিয়োগ অপেক্ষমাণ'
-            : status === 'LAWYER_ASSIGNED'
-            ? 'আইনজীবী নিয়োগ সম্পন্ন'
-            : status === 'HEARING_ONGOING'
-            ? 'শুনানি চলমান'
-            : status === 'MEDIATION_ONGOING'
-            ? 'মধ্যস্থতা পর্ব'
-            : status === 'DISPOSED'
-            ? 'নিষ্পত্তি সম্পন্ন'
-            : 'প্রস্তুতি পর্ব',
-        slaDeadline: deadlines[0]?.dueDate || '২০ সেপ্টেম্বর ২০২৬',
-        slaStatus,
-        legalAidEligibility: 'ELIGIBLE',
-        mediationApplicable:
-          template.category === 'FAMILY' || template.category === 'LAND_PROPERTY',
-        securityClassification: isHighlySensitive ? 'Highly Sensitive' : 'Official',
-        documentCount: documents.length,
-        sensitiveDocumentCount: documents.filter((d) => d.isRestricted).length,
-        securityAlerts:
-          slaStatus === 'BREACHED'
-            ? ['সময়সীমা অতিক্রান্ত সতর্কতা']
-            : isHighlySensitive
-            ? ['ভুক্তভোগীর তথ্য সুরক্ষা ফিল্টার সক্রিয়']
-            : [],
-        createdBy: 'সিস্টেম ফ্রন্ট ডেস্ক',
-        updatedAt: '১০ সেপ্টেম্বর ২০২৬',
-
-        // Domain fields
-        landDispute: template.isLand,
-        propertyType,
-        cybercrimeType: template.isCyber ? template.caseSubcategory : undefined,
-        digitalEvidenceAvailable: template.isCyber,
-        platformType: template.isCyber ? 'সোশ্যাল মিডিয়া প্ল্যাটফর্ম' : undefined,
-        technicalRisk: template.isCyber ? 'অ্যাকাউন্ট অপব্যবহার ঝুঁকি' : undefined,
-        privacyRisk: template.isCyber ? 'ব্যক্তিগত তথ্য ফাঁসের শঙ্কা' : undefined,
-        allegationStatus: template.isBribery ? 'Reported allegation' : undefined,
-
-        applicant: {
-          id: `app-${caseCounter}`,
-          name: applicantName,
-          displayName: applicantDisplayName,
-          nidMasked,
-          phoneMasked,
-          gender: isFemale ? 'নারী' : 'পুরুষ',
-          age: rng.nextInt(22, 58),
-          ageBand: rng.pick(['১৮-২৫', '২৬-৩৫', '৩৬-৫০', '৫১+']),
-          monthlyIncome: rng.nextInt(3500, 11000),
-          occupation: isFemale ? 'গৃহিণী / ক্ষুদ্র উদ্যোক্তা' : 'দিনমজুর / ছোট দোকানি',
-          villageWard: `ওয়ার্ড নং ${rng.nextInt(1, 9)}, ডেমো গ্রাম`,
-          upazila,
-          district: distConfig.district,
-          specialEligibility: template.vulnerabilities,
-          opposingPartyName: opposingName,
-          opposingPartyAddress: `${upazila}, ${distConfig.district}`,
-        },
-      };
-
-      cases.push(generatedCase);
-      caseCounter++;
     }
+  }
+
+  // We want approximately 15–35 hearings on DEMO_SNAPSHOT_DATE ('2026-09-09')
+  // We track how many today's hearings have been created.
+  let todaysHearingsCreated = 0;
+  const targetTodaysHearings = 24;
+
+  let globalIndex = 0;
+
+  for (const distInfo of districtDistribution) {
+    globalIndex++;
+    const id = `CASE-PILOT-${String(globalIndex).padStart(4, '0')}`;
+    const year = 2026;
+    const caseNumber = `NLAS-${distInfo.districtEn.substring(0, 3).toUpperCase()}-${year}-${String(globalIndex).padStart(4, '0')}`;
+
+    const catInfo = shuffledCategories[globalIndex - 1];
+    const status = shuffledStatuses[globalIndex - 1];
+
+    // Pick an upazila belonging strictly to this district
+    const upazila = rng.pick(distInfo.upazilas);
+
+    // Gender assignment aligned with category
+    const isFemaleApplicant =
+      catInfo.category === 'WOMEN_CHILD' ||
+      catInfo.category === 'FAMILY' ||
+      rng.next() < 0.35;
+
+    const firstName = isFemaleApplicant ? rng.pick(FEMALE_FIRST_NAMES) : rng.pick(MALE_FIRST_NAMES);
+    const lastName = rng.pick(LAST_NAMES);
+    const applicantName = `${firstName} ${lastName}`;
+    const opposingName = rng.pick(OPPOSING_NAMES);
+
+    // Chronology Dates:
+    // Filing date: between 15 and 150 days before DEMO_SNAPSHOT_DATE
+    const filingOffsetDays = rng.nextInt(15, 150);
+    const filingDate = addDays(DEMO_SNAPSHOT_DATE, -filingOffsetDays);
+
+    // Registration date: filingDate + 0 to 4 days
+    const regOffset = rng.nextInt(0, 4);
+    const registrationDate = addDays(filingDate, regOffset);
+
+    // Eligibility decision: registrationDate + 0 to 3 days
+    const eligOffset = rng.nextInt(0, 3);
+    const eligibilityDecisionDate = addDays(registrationDate, eligOffset);
+
+    // Lawyer recommendation: eligibilityDecisionDate + 0 to 3 days
+    const recOffset = rng.nextInt(0, 3);
+    const lawyerRecommendationDate = addDays(eligibilityDecisionDate, recOffset);
+
+    // Lawyer assignment:
+    let lawyerAssignmentDate: string | undefined = undefined;
+    let assignedLawyer: PanelLawyer | undefined = undefined;
+
+    const districtLawyers = lawyersByDistrict[distInfo.districtBn] || [];
+
+    if (status !== 'SUBMITTED' && status !== 'ELIGIBILITY_REVIEW' && status !== 'LAWYER_PENDING') {
+      const assignOffset = rng.nextInt(1, 4);
+      lawyerAssignmentDate = addDays(lawyerRecommendationDate, assignOffset);
+
+      // Match lawyer by specialization preference if available
+      const matchingSpecLawyer = districtLawyers.find((l) =>
+        l.specialisations.includes(catInfo.category)
+      );
+      assignedLawyer = matchingSpecLawyer || rng.pick(districtLawyers);
+    }
+
+    // Hearings:
+    const hearings: HearingRecord[] = [];
+    let firstHearingDate: string | undefined = undefined;
+    let latestHearingDate: string | undefined = undefined;
+    let nextHearingDate: string | undefined = undefined;
+
+    const courtName = rng.pick(COURT_TYPES);
+    const benchNumber = `কক্ষ-${rng.nextInt(101, 305)}`;
+
+    if (
+      lawyerAssignmentDate &&
+      status !== 'LAWYER_PENDING' &&
+      status !== 'REGISTERED'
+    ) {
+      // Create 1 to 3 hearings
+      const hearingCount = status === 'DISPOSED' ? rng.nextInt(2, 4) : rng.nextInt(1, 3);
+      let currentHearingDate = addDays(lawyerAssignmentDate, rng.nextInt(5, 20));
+
+      for (let hIdx = 0; hIdx < hearingCount; hIdx++) {
+        if (hIdx === 0) {
+          firstHearingDate = currentHearingDate;
+        }
+
+        // Check if we should place this hearing on today's snapshot date
+        let hearingIso = currentHearingDate;
+        if (
+          todaysHearingsCreated < targetTodaysHearings &&
+          hIdx === hearingCount - 1 &&
+          status !== 'DISPOSED' &&
+          rng.next() < 0.35
+        ) {
+          hearingIso = DEMO_SNAPSHOT_DATE;
+          todaysHearingsCreated++;
+        }
+
+        const hStatusObj = deriveHearingStatus(hearingIso, DEMO_SNAPSHOT_DATE);
+
+        hearings.push({
+          id: `HR-${id}-${hIdx + 1}`,
+          caseId: id,
+          caseNumber,
+          lawyerId: assignedLawyer?.id,
+          lawyerName: assignedLawyer?.name,
+          date: formatDateBn(hearingIso),
+          isoDate: hearingIso,
+          time: `${rng.nextInt(10, 12)}:${rng.pick(['০০', '১৫', '৩০', '৪৫'])} পূর্বাহ্ণ`,
+          courtName: `${distInfo.districtBn} ${courtName}`,
+          benchCourtNumber: benchNumber,
+          district: distInfo.districtBn,
+          judgeName: 'বিজ্ঞ বিচারক',
+          purpose:
+            hIdx === 0
+              ? 'প্রাথমিক অভিযোগ ও নথি উপস্থাপন'
+              : hIdx === 1
+              ? 'সাক্ষ্য গ্রহণ ও জেরা'
+              : 'চূড়ান্ত যুক্তিতর্ক ও আদেশ',
+          status: hStatusObj.status,
+          statusBn: hStatusObj.statusBn,
+          courtOutcomeSummary:
+            hearingIso < DEMO_SNAPSHOT_DATE
+              ? 'উভয় পক্ষের বিজ্ঞ আইনজীবীর বক্তব্য শ্রবণপূর্বক নথিভুক্ত হলো।'
+              : undefined,
+          isPlanned: hearingIso > DEMO_SNAPSHOT_DATE,
+        });
+
+        latestHearingDate = hearingIso;
+
+        // Advance to next hearing date
+        currentHearingDate = addDays(hearingIso, rng.nextInt(14, 45));
+      }
+
+      // Next hearing date for ongoing cases
+      const upcomingHearings = hearings.filter((h) => (h.isoDate || '') >= DEMO_SNAPSHOT_DATE);
+      if (upcomingHearings.length > 0) {
+        nextHearingDate = upcomingHearings[0].isoDate;
+      }
+    }
+
+    // Disposed case date
+    let disposalDate: string | undefined = undefined;
+    let disposalReason: string | undefined = undefined;
+
+    if (status === 'DISPOSED') {
+      const baseDispDate = latestHearingDate || lawyerAssignmentDate || registrationDate;
+      const dispOffset = rng.nextInt(2, 15);
+      const computedDispDate = addDays(baseDispDate, dispOffset);
+      // Ensure disposalDate <= DEMO_SNAPSHOT_DATE
+      disposalDate = computedDispDate <= DEMO_SNAPSHOT_DATE ? computedDispDate : DEMO_SNAPSHOT_DATE;
+      disposalReason = rng.pick([
+        'আদালতের মাধ্যমে আপস-মীমাংসা ও দেনমোহর আদায় সম্পন্ন',
+        'উভয় পক্ষের সম্মতিতে বিকল্প বিরোধ নিষ্পত্তি (এডিআর) চুক্তি স্বাক্ষরিত',
+        'বিজ্ঞ আদালতের চূড়ান্ত রায়ে বাদীর অনুকূলে ডিক্রি জারি',
+        'দাবির অর্থ সম্পূর্ণ পরিশোধিত হওয়ায় নথি নিষ্পত্তি',
+      ]);
+    }
+
+    // Calculate Last Activity Date (must be <= DEMO_SNAPSHOT_DATE)
+    let lastActivityDate = registrationDate;
+    if (lawyerAssignmentDate && lawyerAssignmentDate <= DEMO_SNAPSHOT_DATE) {
+      lastActivityDate = lawyerAssignmentDate;
+    }
+    if (latestHearingDate && latestHearingDate <= DEMO_SNAPSHOT_DATE) {
+      lastActivityDate = latestHearingDate;
+    }
+    if (disposalDate && disposalDate <= DEMO_SNAPSHOT_DATE) {
+      lastActivityDate = disposalDate;
+    }
+
+    // Inactivity Metric (Part 15):
+    // Inactive if >= 14 days without activity
+    const isIntentionallyStuck = rng.next() < 0.16 && status !== 'DISPOSED';
+    let daysWithoutActivity = daysBetween(lastActivityDate, DEMO_SNAPSHOT_DATE);
+
+    if (isIntentionallyStuck) {
+      daysWithoutActivity = rng.nextInt(15, 42);
+      lastActivityDate = addDays(DEMO_SNAPSHOT_DATE, -daysWithoutActivity);
+    } else {
+      daysWithoutActivity = Math.max(0, Math.min(daysWithoutActivity, 40));
+    }
+
+    // SLA Calculation (Part 8)
+    const priorityGuess = catInfo.sensitive ? 'VERY_HIGH' : 'MEDIUM';
+    const sla = calculateCaseSla(
+      registrationDate,
+      priorityGuess,
+      catInfo.category,
+      status,
+      DEMO_SNAPSHOT_DATE
+    );
+
+    // Deadlines
+    const deadlines: CaseDeadline[] = [
+      {
+        id: `DL-${id}-1`,
+        title: 'বিজ্ঞ আদালতে প্রয়োজনীয় নথি দাখিল ও হাজিরা',
+        dueDate: formatDateBn(sla.slaTargetDate),
+        daysRemaining: sla.slaRemainingDays,
+        category: sla.slaRemainingDays < 0 ? 'OVERDUE' : sla.slaRemainingDays <= 7 ? 'AT_RISK' : 'URGENT',
+        assignedOfficer: 'সহকারী লিগ্যাল এইড অফিসার',
+        assignedLawyer: assignedLawyer?.name,
+        status: status === 'DISPOSED' ? 'MET' : sla.slaRemainingDays < 0 ? 'OVERDUE' : 'PENDING',
+        actionRequired: 'নথি প্রস্তুত ও বিজ্ঞ আদালতে উপস্থাপন',
+      },
+    ];
+
+    // Documents
+    const documents: CaseDocument[] = [
+      {
+        id: `DOC-${id}-01`,
+        title: 'আইনগত সহায়তা আবেদনপত্র (মূল কপি)',
+        category: 'APPLICATION',
+        fileName: `Application_${caseNumber}.pdf`,
+        fileSizeBytes: 245000,
+        uploadedAt: formatDateBn(filingDate),
+        uploadedBy: 'জেলা লিগ্যাল এইড সহকারী',
+        mimeType: 'application/pdf',
+        securityHash: `sha256-${id}-app-01`,
+        isRestricted: false,
+        accessCount: rng.nextInt(2, 8),
+      },
+      {
+        id: `DOC-${id}-02`,
+        title: 'জাতীয় পরিচয়পত্র ও নাগরিক সনদপত্র',
+        category: 'IDENTITY',
+        fileName: `NID_Applicant_${id}.pdf`,
+        fileSizeBytes: 180000,
+        uploadedAt: formatDateBn(registrationDate),
+        uploadedBy: 'ফ্রন্ট ডেস্ক অফিসার',
+        mimeType: 'application/pdf',
+        securityHash: `sha256-${id}-nid-02`,
+        isRestricted: catInfo.sensitive,
+        accessCount: rng.nextInt(1, 5),
+      },
+    ];
+
+    if (assignedLawyer) {
+      documents.push({
+        id: `DOC-${id}-03`,
+        title: 'বিজ্ঞ প্যানেল আইনজীবী নিয়োগ পত্র (অফিসিয়াল)',
+        category: 'COURT_ORDER',
+        fileName: `Lawyer_Assignment_${id}.pdf`,
+        fileSizeBytes: 310000,
+        uploadedAt: formatDateBn(lawyerAssignmentDate!),
+        uploadedBy: 'জেলা লিগ্যাল এইড অফিসার',
+        mimeType: 'application/pdf',
+        securityHash: `sha256-${id}-ord-03`,
+        isRestricted: false,
+        accessCount: rng.nextInt(3, 11),
+      });
+    }
+
+    // Timeline Events strictly chronological
+    const timeline: TimelineEvent[] = [
+      {
+        id: `TL-${id}-1`,
+        date: formatDateBn(filingDate),
+        isoDate: filingDate,
+        time: '১০:৩০ পূর্বাহ্ণ',
+        user: 'নাগরিক সেবা ডেস্ক',
+        role: 'ASSISTANT_OFFICER',
+        action: 'আবেদন দাখিল',
+        description: 'নাগরিক সরাসরি উপস্থিত হয়ে বিনামূল্যে সরকারি আইনি সহায়তার আবেদন দাখিল করেন।',
+        isOfficialRecord: true,
+      },
+      {
+        id: `TL-${id}-2`,
+        date: formatDateBn(registrationDate),
+        isoDate: registrationDate,
+        time: '১১:১৫ পূর্বাহ্ণ',
+        user: 'জেলা লিগ্যাল এইড অফিসার',
+        role: 'DISTRICT_OFFICER',
+        action: 'মামলা নিবন্ধন ও প্রাথমিক যাচাই',
+        description: 'আবেদনকারীর আর্থিক অসচ্ছলতা ও অভিযোগের প্রাথমিক সত্যতা যাচাইপূর্বক মামলাটি ডিজিটাল রেজিস্ট্রারে নিবন্ধিত হয়।',
+        isOfficialRecord: true,
+      },
+    ];
+
+    if (lawyerAssignmentDate) {
+      timeline.push({
+        id: `TL-${id}-3`,
+        date: formatDateBn(lawyerAssignmentDate),
+        isoDate: lawyerAssignmentDate,
+        time: '০২:০০ অপরাহ্ণ',
+        user: 'জেলা লিগ্যাল এইড অফিসার',
+        role: 'DISTRICT_OFFICER',
+        action: 'প্যানেল আইনজীবী নিয়োগ',
+        description: `মামলার শাখা ও অভিজ্ঞতার ভিত্তিতে বিজ্ঞ প্যানেল আইনজীবী ${assignedLawyer?.name}-কে নিয়োগ প্রদান করা হয়।`,
+        isOfficialRecord: true,
+      });
+    }
+
+    for (const h of hearings) {
+      if (h.isoDate && h.isoDate <= DEMO_SNAPSHOT_DATE) {
+        timeline.push({
+          id: `TL-${h.id}`,
+          date: h.date,
+          isoDate: h.isoDate,
+          time: h.time,
+          user: assignedLawyer?.name || 'বিজ্ঞ প্যানেল আইনজীবী',
+          role: 'PANEL_LAWYER',
+          action: 'আদালতে শুনানি অনুষ্ঠিত',
+          description: `${h.courtName}-এ শুনানি সম্পন্ন। উদ্দেশ্য: ${h.purpose}`,
+          isOfficialRecord: true,
+        });
+      }
+    }
+
+    if (disposalDate) {
+      timeline.push({
+        id: `TL-${id}-DISP`,
+        date: formatDateBn(disposalDate),
+        isoDate: disposalDate,
+        time: '০৩:৩০ অপরাহ্ণ',
+        user: 'জেলা লিগ্যাল এইড অফিসার',
+        role: 'DISTRICT_OFFICER',
+        action: 'মামলা নিষ্পত্তি ও সমাপ্তি',
+        description: `${disposalReason}`,
+        isOfficialRecord: true,
+      });
+    }
+
+    const partialCase: Partial<LegalAidCase> = {
+      id,
+      caseNumber,
+      applicant: {
+        id: `APP-${id}`,
+        name: applicantName,
+        displayName: applicantName,
+        nidMasked: `****-****-${rng.nextInt(1000, 9999)}`,
+        phoneMasked: `০১৭**-***${rng.nextInt(100, 999)}`,
+        gender: isFemaleApplicant ? 'নারী' : 'পুরুষ',
+        age: rng.nextInt(20, 58),
+        ageBand: isFemaleApplicant ? '২৬-৩৫' : '৩৬-৫০',
+        monthlyIncome: rng.nextInt(3500, 9500),
+        occupation: rng.pick(OCCUPATIONS_LOW_INCOME),
+        villageWard: `ওয়ার্ড নং ${rng.nextInt(1, 9)}`,
+        upazila,
+        district: distInfo.districtBn,
+        specialEligibility: isFemaleApplicant
+          ? ['আর্থিকভাবে অসচ্ছল নারী', 'পারিবারিক সহিংসতার শিকার']
+          : ['হতদরিদ্র ও অস্বচ্ছল কৃষক'],
+        opposingPartyName: opposingName,
+        opposingPartyAddress: `${upazila}, ${distInfo.districtBn}`,
+      },
+      category: catInfo.category,
+      summary: `${applicantName} বনাম ${opposingName}। বিষয়: ${catInfo.subcat} সংক্রান্ত সরকারি আইনি সহায়তা প্রার্থনা।`,
+      securityClassification: catInfo.sensitive ? 'Highly Sensitive' : 'Official',
+      nextHearingDate,
+      daysWithoutActivity,
+      slaStatus: sla.slaStatus,
+      assignedLawyerId: assignedLawyer?.id || null,
+      status,
+    };
+
+    // Calculate Risk deterministically
+    const riskResult = calculateRisk(partialCase, DEMO_SNAPSHOT_DATE);
+
+    const legalCase: LegalAidCase = {
+      id,
+      isDemoData: true,
+      caseNumber,
+      applicant: partialCase.applicant!,
+      category: catInfo.category,
+      courtName: `${distInfo.districtBn} ${courtName}`,
+      courtType: courtName,
+      district: distInfo.districtBn,
+      districtType: 'DIGITAL_LEGAL_AID_PILOT',
+      upazila,
+      status,
+      filingDate,
+      registrationDate,
+      eligibilityDecisionDate,
+      lawyerRecommendationDate,
+      lawyerAssignmentDate,
+      firstHearingDate,
+      latestHearingDate,
+      lastActivityDate,
+      disposalDate,
+      disposalReason,
+      applicationDate: formatDateBn(filingDate),
+      assignedDate: lawyerAssignmentDate ? formatDateBn(lawyerAssignmentDate) : undefined,
+      nextHearingDate,
+      daysWithoutActivity,
+      daysSinceLastActivity: daysWithoutActivity,
+
+      // SLA fields
+      slaStartDate: sla.slaStartDate,
+      configuredSlaDays: sla.configuredSlaDays,
+      slaTargetDate: sla.slaTargetDate,
+      slaRemainingDays: sla.slaRemainingDays,
+      slaConsumedPercentage: sla.slaConsumedPercentage,
+      slaStatus: sla.slaStatus,
+
+      // Risk fields
+      riskScore: riskResult.score,
+      riskLevel: riskResult.level,
+      riskFactorsList: riskResult.factors,
+      priorityAssessment: {
+        calculatedPriority: riskResult.calculatedPriority,
+        score: riskResult.score,
+        factors: riskResult.factors.map((f) => ({
+          title: f.title,
+          impact: 'POSITIVE',
+          description: f.description,
+        })),
+      },
+
+      assignedOfficerName: 'মো. সাজ্জাদ হোসেন (সিনিয়র সহকারী জজ)',
+      assignedLawyerId: assignedLawyer?.id || null,
+      assignedLawyerName: assignedLawyer?.name,
+      assignedLawyerBarNo: assignedLawyer?.barRegNo,
+
+      hearings,
+      deadlines,
+      timeline,
+      documents,
+      summary: partialCase.summary!,
+      legalIssues: [
+        `${catInfo.subcat} সংশ্লিষ্ট প্রমাণাদি উপস্থাপন`,
+        'পক্ষদ্বয়ের বক্তব্য ও আপস সমঝোতার সুযোগ অন্বেষণ',
+      ],
+      reliefSought:
+        catInfo.category === 'WOMEN_CHILD' || catInfo.category === 'FAMILY'
+          ? 'আইনানুগ দেনমোহর, খোরপোষ ও শিশু সন্তানদের ভরণপোষণ উদ্ধার এবং সুরক্ষা নিশ্চিতকরণ।'
+          : 'দখল পুনরুদ্ধার, ক্ষতিপূরণ আদায় ও ন্যায়বিচার প্রাপ্তি।',
+
+      // Synthetic compatibility
+      caseCategory: catInfo.category,
+      caseSubcategory: catInfo.subcat,
+      applicantName,
+      applicantDisplayName: applicantName,
+      applicantGender: isFemaleApplicant ? 'নারী' : 'পুরুষ',
+      priorityLevel: riskResult.calculatedPriority,
+      securityClassification: catInfo.sensitive ? 'Highly Sensitive' : 'Official',
+      documentCount: documents.length,
+      sensitiveDocumentCount: catInfo.sensitive ? 2 : 0,
+    };
+
+    cases.push(legalCase);
   }
 
   return cases;

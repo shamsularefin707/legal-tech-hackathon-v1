@@ -1,65 +1,141 @@
 /**
  * ডেমো কনফিগারেশন ও নির্ধারক পিআরএনজি (Deterministic Demo PRNG & Configuration)
- * All data generated is strictly fictional for hackathon demonstration purposes.
+ * 8 Digital Legal-Aid Pilot Districts, Quotas, and Temporal Rules
+ * Fictional synthetic dataset strictly for hackathon demonstration.
  */
 
 export const DEFAULT_DEMO_DATA_SEED = 20260909;
+export const DEMO_SNAPSHOT_DATE = '2026-09-09';
+
+export type DistrictType = 'DIGITAL_LEGAL_AID_PILOT' | 'REFERENCE_GEOGRAPHY';
 
 export interface PilotDistrictConfig {
   districtBn: string;
   districtEn: string;
+  type: DistrictType;
   targetCases: number;
   targetLawyers: number;
   upazilas: string[];
 }
 
+/**
+ * Eight (8) designated Digital Legal Aid Pilot Districts:
+ * Rajbari, Habiganj, Barguna, Netrokona, Joypurhat, Thakurgaon, Jhenaidah, Khagrachhari
+ */
 export const PILOT_DISTRICTS: PilotDistrictConfig[] = [
+  {
+    districtBn: 'রাজবাড়ী',
+    districtEn: 'Rajbari',
+    type: 'DIGITAL_LEGAL_AID_PILOT',
+    targetCases: 65,
+    targetLawyers: 4,
+    upazilas: ['রাজবাড়ী সদর', 'গোয়ালন্দ', 'পাংশা', 'বালিয়াকান্দি', 'কালুখালী'],
+  },
+  {
+    districtBn: 'হবিগঞ্জ',
+    districtEn: 'Habiganj',
+    type: 'DIGITAL_LEGAL_AID_PILOT',
+    targetCases: 65,
+    targetLawyers: 4,
+    upazilas: [
+      'হবিগঞ্জ সদর',
+      'নবীগঞ্জ',
+      'বাহুবল',
+      'মাধবপুর',
+      'চুনারুঘাট',
+      'লাখাই',
+      'বানিয়াচং',
+      'আজমিরীগঞ্জ',
+      'শায়েস্তাগঞ্জ',
+    ],
+  },
+  {
+    districtBn: 'বরগুনা',
+    districtEn: 'Barguna',
+    type: 'DIGITAL_LEGAL_AID_PILOT',
+    targetCases: 65,
+    targetLawyers: 4,
+    upazilas: ['বরগুনা সদর', 'আমতলী', 'পাথরঘাটা', 'বেতাগী', 'বামনা', 'তালতলী'],
+  },
+  {
+    districtBn: 'নেত্রকোণা',
+    districtEn: 'Netrokona',
+    type: 'DIGITAL_LEGAL_AID_PILOT',
+    targetCases: 65,
+    targetLawyers: 4,
+    upazilas: [
+      'নেত্রকোণা সদর',
+      'কেন্দুয়া',
+      'মোহনগঞ্জ',
+      'দুর্গাপুর',
+      'কলমাকান্দা',
+      'পূর্বধলা',
+      'বারহাট্টা',
+      'আটপাড়া',
+      'মদন',
+      'খালিয়াজুরী',
+    ],
+  },
+  {
+    districtBn: 'জয়পুরহাট',
+    districtEn: 'Joypurhat',
+    type: 'DIGITAL_LEGAL_AID_PILOT',
+    targetCases: 60,
+    targetLawyers: 3,
+    upazilas: ['জয়পুরহাট সদর', 'পাঁচবিবি', 'কালাই', 'ক্ষেতলাল', 'আক্কেলপুর'],
+  },
+  {
+    districtBn: 'ঠাকুরগাঁও',
+    districtEn: 'Thakurgaon',
+    type: 'DIGITAL_LEGAL_AID_PILOT',
+    targetCases: 60,
+    targetLawyers: 4,
+    upazilas: ['ঠাকুরগাঁও সদর', 'পীরগঞ্জ', 'রাণীশংকৈল', 'বালিয়াডাঙ্গী', 'হরিপুর'],
+  },
+  {
+    districtBn: 'ঝিনাইদহ',
+    districtEn: 'Jhenaidah',
+    type: 'DIGITAL_LEGAL_AID_PILOT',
+    targetCases: 60,
+    targetLawyers: 4,
+    upazilas: ['ঝিনাইদহ সদর', 'কালীগঞ্জ', 'কোটচাঁদপুর', 'মহেশপুর', 'শৈলকুপা', 'হরিণাকুণ্ডু'],
+  },
+  {
+    districtBn: 'খাগড়াছড়ি',
+    districtEn: 'Khagrachhari',
+    type: 'DIGITAL_LEGAL_AID_PILOT',
+    targetCases: 60,
+    targetLawyers: 3,
+    upazilas: [
+      'খাগড়াছড়ি সদর',
+      'দিঘীনালা',
+      'পানছড়ি',
+      'মহালছড়ি',
+      'মাটিরাঙ্গা',
+      'মানিকছড়ি',
+      'রামগড়',
+      'গুইমারা',
+      'লক্ষ্মীছড়ি',
+    ],
+  },
+];
+
+/**
+ * Optional Reference / Non-Pilot Geography (explicitly labeled for benchmark comparisons)
+ */
+export const REFERENCE_DISTRICTS: PilotDistrictConfig[] = [
   {
     districtBn: 'ঢাকা',
     districtEn: 'Dhaka',
-    targetCases: 150,
-    targetLawyers: 7,
+    type: 'REFERENCE_GEOGRAPHY',
+    targetCases: 0,
+    targetLawyers: 0,
     upazilas: ['সাভার', 'কেরানীগঞ্জ', 'ধামরাই', 'দোহার', 'নবাবগঞ্জ', 'ঢাকা সদর'],
-  },
-  {
-    districtBn: 'গাজীপুর',
-    districtEn: 'Gazipur',
-    targetCases: 80,
-    targetLawyers: 4,
-    upazilas: ['গাজীপুর সদর', 'কালিয়াকৈর', 'কাপাসিয়া', 'শ্রীপুর', 'কালীগঞ্জ'],
-  },
-  {
-    districtBn: 'নারায়ণগঞ্জ',
-    districtEn: 'Narayanganj',
-    targetCases: 75,
-    targetLawyers: 4,
-    upazilas: ['নারায়ণগঞ্জ সদর', 'সোনারগাঁ', 'রূপগঞ্জ', 'আড়াইহাজার', 'বন্দর'],
-  },
-  {
-    districtBn: 'চট্টগ্রাম',
-    districtEn: 'Chattogram',
-    targetCases: 75,
-    targetLawyers: 4,
-    upazilas: ['চট্টগ্রাম সদর', 'পটিয়া', 'সীতাকুণ্ড', 'হাটহাজারী', 'বোয়ালখালী', 'আনোয়ারা'],
-  },
-  {
-    districtBn: 'কুমিল্লা',
-    districtEn: 'Cumilla',
-    targetCases: 65,
-    targetLawyers: 3,
-    upazilas: ['কুমিল্লা সদর', 'দাউদকান্দি', 'দেবিদ্বার', 'চান্দিনা', 'বুড়িচং', 'মুরাদনগর'],
-  },
-  {
-    districtBn: 'টাঙ্গাইল',
-    districtEn: 'Tangail',
-    targetCases: 55,
-    targetLawyers: 3,
-    upazilas: ['টাঙ্গাইল সদর', 'মির্জাপুর', 'সখীপুর', 'ঘাটাইল', 'মধুপুর', 'কালিহাতী'],
   },
 ];
 
 export const TOTAL_CASES_TARGET = 500;
-export const TOTAL_LAWYERS_TARGET = 25;
+export const TOTAL_LAWYERS_TARGET = 30;
 
 export const COURT_TYPES = [
   'নারী ও শিশু নির্যাতন দমন ট্রাইব্যুনাল',
@@ -71,6 +147,22 @@ export const COURT_TYPES = [
   'আমলি আদালত / ম্যাজিস্ট্রেট কোর্ট',
   'বিকল্প বিরোধ নিষ্পত্তি / এডিআর ফোরাম',
 ];
+
+/**
+ * Validates that an upazila strictly belongs to the given pilot district
+ */
+export function validateDistrictRelationship(district: string, upazila: string): boolean {
+  const found = PILOT_DISTRICTS.find(
+    (d) => d.districtBn === district || d.districtEn.toLowerCase() === district.toLowerCase()
+  );
+  if (!found) {
+    const refFound = REFERENCE_DISTRICTS.find(
+      (d) => d.districtBn === district || d.districtEn.toLowerCase() === district.toLowerCase()
+    );
+    return refFound ? refFound.upazilas.includes(upazila) : false;
+  }
+  return found.upazilas.includes(upazila);
+}
 
 /**
  * Deterministic pseudo-random number generator (Mulberry32)

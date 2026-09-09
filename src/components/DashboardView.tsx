@@ -19,6 +19,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { useLegalAid } from '../context/LegalAidContext';
+import { calculateDashboardMetrics } from '../services/dashboardMetrics';
 
 export const DashboardView: React.FC = () => {
   const {
@@ -34,21 +35,20 @@ export const DashboardView: React.FC = () => {
     runSecuritySimulation,
   } = useLegalAid();
 
-  // Dynamic Metrics derived from synthetic dataset
-  const totalCases = cases.length;
+  // Dynamic Metrics derived using the service engine
+  const metrics = React.useMemo(
+    () => calculateDashboardMetrics(cases, lawyers, securityIncidents, vulnerabilities),
+    [cases, lawyers, securityIncidents, vulnerabilities]
+  );
+
+  const totalCases = metrics.totalCases;
   const activeCases = cases.filter((c) => c.status !== 'DISPOSED').length;
   const pendingDisposal = cases.filter(
     (c) => c.status === 'HEARING_ONGOING' || c.status === 'MEDIATION_ONGOING'
   ).length;
-  const overdueCount = cases.filter(
-    (c) => c.slaStatus === 'BREACHED' || c.deadlines.some((d) => d.status === 'OVERDUE')
-  ).length;
-  const todayHearings = cases.filter(
-    (c) => c.hearings && c.hearings.length > 0 && c.status === 'HEARING_ONGOING'
-  ).length;
-  const pendingLawyerAssignmentCount = cases.filter(
-    (c) => c.status === 'PENDING_LAWYER_ASSIGNMENT'
-  ).length;
+  const overdueCount = metrics.overdueCases;
+  const todayHearings = metrics.todaysHearingsCount;
+  const pendingLawyerAssignmentCount = metrics.lawyerAssignmentPendingCount;
 
   // High Priority Cases (Sorted by score descending)
   const priorityCases = cases

@@ -1,7 +1,7 @@
 /**
  * জাতীয় আইনগত সহায়তা কার্যক্রম ব্যবস্থাপনা
- * Core Types & Data Definitions
- * Inspired by NALSA LACMS & LADCS, adapted for Bangladesh Justice Operations
+ * Core Types & Normalized Justice Operations Architecture
+ * Inspired by NALSA LACMS & LADCS, adapted for Bangladesh Digital Legal Aid Pilot
  */
 
 export type UserRole =
@@ -26,21 +26,34 @@ export interface User {
   active: boolean;
 }
 
+/**
+ * Normalized Internal Case Statuses (Part 6)
+ */
 export type CaseStatus =
-  | 'NEW_APPLICATION'               // নতুন আবেদন
-  | 'INITIAL_VERIFICATION'          // প্রাথমিক যাচাই
-  | 'ELIGIBILITY_CHECK'             // যোগ্যতা যাচাই
-  | 'PENDING_APPROVAL'              // অনুমোদনের অপেক্ষায়
-  | 'APPROVED'                      // অনুমোদিত
-  | 'PENDING_LAWYER_ASSIGNMENT'     // আইনজীবী নিয়োগ অপেক্ষমাণ
-  | 'LAWYER_ASSIGNED'               // আইনজীবী নিয়োগ সম্পন্ন
-  | 'IN_PROGRESS'                   // চলমান
-  | 'HEARING_ONGOING'               // শুনানি চলমান
-  | 'MEDIATION_ONGOING'             // মধ্যস্থতা চলমান
-  | 'DISPOSED'                      // নিষ্পত্তি হয়েছে
-  | 'CLOSED'                        // বন্ধ
-  | 'STAYED'                        // স্থগিত
-  | 'TRANSFERRED';                  // স্থানান্তরিত
+  | 'SUBMITTED'               // আবেদন দাখিলকৃত
+  | 'ELIGIBILITY_REVIEW'      // যোগ্যতা যাচাইাধীন
+  | 'REGISTERED'              // নিবন্ধিত
+  | 'LAWYER_PENDING'          // আইনজীবী নিয়োগ অপেক্ষমাণ
+  | 'LAWYER_ASSIGNED'         // আইনজীবী নিয়োগ সম্পন্ন
+  | 'HEARING_SCHEDULED'       // শুনানি নির্ধারিত
+  | 'ONGOING'                 // চলমান বিচারিক কার্যক্রম
+  | 'AWAITING_RESOLUTION'     // নিষ্পত্তির অপেক্ষায়
+  | 'DISPOSED'                // নিষ্পত্তিকৃত
+  | 'CLOSED'                  // সমাপ্ত / সংরক্ষিত
+  | 'OVERDUE'                 // সময়সীমা অতিক্রান্ত
+  | 'ESCALATED'               // উচ্চপর্যায়ে প্রেরিত
+  // Legacy aliases supported for smooth rendering
+  | 'NEW_APPLICATION'
+  | 'INITIAL_VERIFICATION'
+  | 'ELIGIBILITY_CHECK'
+  | 'PENDING_APPROVAL'
+  | 'APPROVED'
+  | 'PENDING_LAWYER_ASSIGNMENT'
+  | 'IN_PROGRESS'
+  | 'HEARING_ONGOING'
+  | 'MEDIATION_ONGOING'
+  | 'STAYED'
+  | 'TRANSFERRED';
 
 export type CaseCategory =
   | 'CRIMINAL'          // ফৌজদারি
@@ -55,6 +68,7 @@ export type CaseCategory =
   | 'OTHER';            // অন্যান্য
 
 export type PriorityLevel = 'VERY_HIGH' | 'HIGH' | 'MEDIUM' | 'LOW';
+export type RiskLevel = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 
 export interface PriorityFactor {
   title: string;
@@ -65,7 +79,7 @@ export interface PriorityFactor {
 export interface PriorityAssessment {
   calculatedPriority: PriorityLevel;
   factors: PriorityFactor[];
-  score: number; // 0 - 100
+  score: number; // 20 - 99
   officerOverride?: {
     overriddenPriority: PriorityLevel;
     officerName: string;
@@ -78,9 +92,9 @@ export interface PriorityAssessment {
 export interface Applicant {
   id: string;
   name: string;
-  displayName?: string; // e.g. "ডেমো আবেদনকারী 001" or "Demo Applicant • Protected"
-  nidMasked: string; // e.g. "*********1284"
-  phoneMasked: string; // e.g. "017******84"
+  displayName?: string;
+  nidMasked: string;
+  phoneMasked: string;
   gender: 'পুরুষ' | 'নারী' | 'অন্যান্য';
   age: number;
   ageBand?: '১৮-২৫' | '২৬-৩৫' | '৩৬-৫০' | '৫১+' | 'নাবালক/কিশোর';
@@ -89,19 +103,22 @@ export interface Applicant {
   villageWard: string;
   upazila: string;
   district: string;
-  specialEligibility: string[]; // e.g. ["নারী", "অতি দরিদ্র", "কারাবন্দী আত্মীয়"]
+  specialEligibility: string[];
   opposingPartyName: string;
   opposingPartyAddress: string;
 }
+
+export type LawyerCapacityStatus = 'UNDER_CAPACITY' | 'NORMAL' | 'NEAR_CAPACITY' | 'OVER_CAPACITY';
 
 export interface PanelLawyer {
   id: string;
   name: string;
   displayName?: string;
-  barRegNo: string; // e.g. "DH-BAR-2015-4821"
+  barRegNo: string;
   phone: string;
   email: string;
   district: string;
+  districtType?: 'DIGITAL_LEGAL_AID_PILOT' | 'REFERENCE_GEOGRAPHY';
   specialisations: CaseCategory[];
   specializationNames?: string[];
   experienceYears: number;
@@ -109,12 +126,13 @@ export interface PanelLawyer {
   maxCaseLimit: number;
   capacity?: number;
   workloadPercentage?: number;
+  capacityStatus?: LawyerCapacityStatus;
   highPriorityCases?: number;
   upcomingHearings?: number;
   overdueTasks?: number;
   availability: 'AVAILABLE' | 'BUSY' | 'UNAVAILABLE';
   status?: 'ACTIVE' | 'BUSY' | 'LEAVE';
-  knownConflicts: string[]; // Names of clients / institutions / opposing parties with conflicts
+  knownConflicts: string[];
   disposedCasesCount: number;
   successRatePercentage: number;
   address: string;
@@ -123,7 +141,8 @@ export interface PanelLawyer {
 
 export interface TimelineEvent {
   id: string;
-  date: string;
+  date: string; // Display formatted e.g. "০৯ আগস্ট ২০২৬" or ISO "2026-08-09"
+  isoDate?: string; // Normalized ISO "YYYY-MM-DD"
   time: string;
   user: string;
   role: string;
@@ -132,17 +151,30 @@ export interface TimelineEvent {
   isOfficialRecord: boolean;
 }
 
+/**
+ * Normalized Hearing Statuses (Part 7)
+ */
+export type HearingStatus = 'COMPLETED' | 'TODAY' | 'UPCOMING' | 'OVERDUE_REVIEW';
+
 export interface HearingRecord {
   id: string;
-  date: string;
+  caseId?: string;
+  caseNumber?: string;
+  lawyerId?: string;
+  lawyerName?: string;
+  date: string; // Bengali display e.g. "০৯ সেপ্টেম্বর ২০২৬"
+  isoDate?: string; // Normalized ISO "2026-09-09"
   time: string;
   courtName: string;
   benchCourtNumber: string;
+  district?: string;
   judgeName?: string;
   purpose: string;
-  status: 'নির্ধারিত' | 'অনুষ্ঠিত' | 'মুলতবি' | 'বাতিল';
+  status: HearingStatus | 'নির্ধারিত' | 'অনুষ্ঠিত' | 'মুলতবি' | 'বাতিল';
+  statusBn?: string;
   courtOutcomeSummary?: string;
   nextDate?: string;
+  isPlanned?: boolean;
 }
 
 export interface CaseDeadline {
@@ -161,13 +193,13 @@ export interface CaseDocument {
   id: string;
   title: string;
   category:
-    | 'APPLICATION'        // আবেদন
-    | 'IDENTITY'           // পরিচয় সংক্রান্ত নথি
-    | 'CASE_RECORD'        // মামলার নথি
-    | 'COURT_ORDER'        // আদালতের আদেশ
-    | 'HEARING_RECORD'     // শুনানির নথি
-    | 'MEDIATION_RECORD'   // মধ্যস্থতার নথি
-    | 'OTHER';             // অন্যান্য
+    | 'APPLICATION'
+    | 'IDENTITY'
+    | 'CASE_RECORD'
+    | 'COURT_ORDER'
+    | 'HEARING_RECORD'
+    | 'MEDIATION_RECORD'
+    | 'OTHER';
   fileName: string;
   fileSizeBytes: number;
   uploadedAt: string;
@@ -178,16 +210,28 @@ export interface CaseDocument {
   accessCount: number;
 }
 
+/**
+ * Normalized SLA Statuses (Part 8)
+ */
+export type SlaStatus = 'ON_TRACK' | 'AT_RISK' | 'OVERDUE' | 'ESCALATED' | 'RESOLVED';
+
+export interface RiskFactorDetail {
+  title: string;
+  impact: number;
+  description: string;
+}
+
 export interface LegalAidCase {
   id: string;
   isDemoData?: boolean;
-  caseNumber: string; // e.g. "LA-DEMO-2026-001284"
+  caseNumber: string;
   applicant: Applicant;
   category: CaseCategory;
-  courtCaseNumber?: string; // Court registered number e.g. "নালিশী মামলা নং ৪১২/২০২৬"
+  courtCaseNumber?: string;
   courtName: string;
   courtType?: string;
   district: string;
+  districtType?: 'DIGITAL_LEGAL_AID_PILOT' | 'REFERENCE_GEOGRAPHY';
   upazila: string;
   status: CaseStatus;
   priorityAssessment: PriorityAssessment;
@@ -195,9 +239,40 @@ export interface LegalAidCase {
   assignedLawyerId?: string | null;
   assignedLawyerName?: string;
   assignedLawyerBarNo?: string;
-  applicationDate: string;
+
+  // Normalized Sequential Dates (Part 2)
+  filingDate?: string; // ISO 'YYYY-MM-DD'
+  registrationDate?: string; // ISO 'YYYY-MM-DD'
+  eligibilityDecisionDate?: string; // ISO 'YYYY-MM-DD'
+  lawyerRecommendationDate?: string; // ISO 'YYYY-MM-DD'
+  lawyerAssignmentDate?: string; // ISO 'YYYY-MM-DD'
+  firstHearingDate?: string; // ISO 'YYYY-MM-DD'
+  latestHearingDate?: string; // ISO 'YYYY-MM-DD'
+  lastActivityDate: string; // ISO 'YYYY-MM-DD'
+  disposalDate?: string; // ISO 'YYYY-MM-DD'
+  disposalReason?: string;
+  applicationDate: string; // display or ISO
   assignedDate?: string;
   nextHearingDate?: string;
+
+  // Inactivity metric
+  daysWithoutActivity: number;
+  daysSinceLastActivity?: number;
+
+  // Normalized SLA Engine (Part 8)
+  slaStartDate?: string; // ISO 'YYYY-MM-DD'
+  configuredSlaDays?: number;
+  slaTargetDate?: string; // ISO 'YYYY-MM-DD'
+  slaRemainingDays?: number;
+  slaConsumedPercentage?: number;
+  slaStatus?: SlaStatus | 'NORMAL' | 'APPROACHING_RISK' | 'BREACHED';
+
+  // Deterministic Risk Engine (Part 13 & 14)
+  riskScore?: number; // 20 - 99
+  riskLevel?: RiskLevel;
+  riskFactorsList?: RiskFactorDetail[];
+
+  // Hearings & Timeline
   deadlines: CaseDeadline[];
   hearings: HearingRecord[];
   timeline: TimelineEvent[];
@@ -205,15 +280,11 @@ export interface LegalAidCase {
   summary: string;
   legalIssues: string[];
   reliefSought: string;
-  lastActivityDate: string;
-  daysWithoutActivity: number; // For "stuck case" detection
-  daysSinceLastActivity?: number;
+
   mediationAttempted?: boolean;
   mediationOutcome?: string;
-  disposalDate?: string;
-  disposalReason?: string;
 
-  // Synthetic dataset structured schema fields
+  // Synthetic schema compatibility fields
   caseCategory?: string;
   caseSubcategory?: string;
   description?: string;
@@ -223,11 +294,9 @@ export interface LegalAidCase {
   applicantAgeBand?: string;
   vulnerabilityFactors?: string[];
   priorityLevel?: PriorityLevel;
-  riskScore?: number;
   riskFactors?: string[];
   filingStage?: string;
   slaDeadline?: string;
-  slaStatus?: 'NORMAL' | 'APPROACHING_RISK' | 'BREACHED';
   legalAidEligibility?: 'ELIGIBLE' | 'REVIEW_PENDING' | 'SPECIAL_APPROVAL';
   mediationApplicable?: boolean;
   securityClassification?: 'Highly Sensitive' | 'Confidential' | 'Official' | 'Standard';
@@ -259,11 +328,14 @@ export type AuditEventType =
   | 'TOKEN_VALIDATION_FAILED'
   | 'SECURITY_INCIDENT_CREATED'
   | 'VULNERABILITY_REMEDIATED'
+  | 'HEARING_RESCHEDULED'
+  | 'DATASET_REGENERATED'
   | 'OTHER';
 
 export interface AuditLogEntry {
   id: string;
-  timestamp: string;
+  timestamp: string; // e.g. "২০২৬-০৯-০৯ ১০:১৫:০০"
+  isoTimestamp?: string; // ISO
   user: string;
   role: string;
   action: string;
@@ -275,6 +347,10 @@ export interface AuditLogEntry {
   outcome: 'সফল' | 'প্রত্যাখ্যাত' | 'ব্লক করা হয়েছে';
   reason?: string;
   correlationId?: string;
+  caseId?: string;
+  incidentId?: string;
+  vulnerabilityId?: string;
+  integrityStatus?: 'VALID' | 'VERIFIED' | 'TAMPER_CHECKED';
   ipAddress: string;
   districtScope: string;
   details: string;
@@ -291,6 +367,7 @@ export interface AuditLogEntry {
 export interface SecurityEvent {
   id: string;
   timestamp: string;
+  isoTimestamp?: string;
   eventType?: string;
   severity: 'INFO' | 'WARNING' | 'CRITICAL';
   title: string;
@@ -299,6 +376,8 @@ export interface SecurityEvent {
   role: string;
   resourceId?: string;
   caseId?: string;
+  vulnerabilityId?: string;
+  incidentId?: string;
   actorType?: string;
   actorId?: string;
   result?: string;
@@ -312,7 +391,15 @@ export interface SecurityEvent {
 }
 
 export type VulnerabilitySeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
-export type VulnerabilityStatus = 'OPEN' | 'UNDER_REVIEW' | 'MITIGATING' | 'CONTAINED' | 'RESOLVED';
+export type VulnerabilityStatus =
+  | 'OPEN'
+  | 'TRIAGED'
+  | 'MITIGATING'
+  | 'PATCHED'
+  | 'VERIFYING'
+  | 'RESOLVED'
+  | 'UNDER_REVIEW'
+  | 'CONTAINED';
 
 export type LifecycleStageKey =
   | 'DETECT'
@@ -355,8 +442,19 @@ export interface VulnerabilityItem {
   remediationPlan: string;
   lifecycle: VulnerabilityLifecycleStage[];
   relatedIncidentId?: string;
+  relatedControl?: string;
   isDemoData?: boolean;
 }
+
+export type IncidentStatus =
+  | 'OPEN'
+  | 'DETECTED'
+  | 'TRIAGED'
+  | 'CONTAINED'
+  | 'INVESTIGATING'
+  | 'REMEDIATED'
+  | 'VERIFIED'
+  | 'CLOSED';
 
 export interface SecurityIncident {
   id: string;
@@ -364,8 +462,9 @@ export interface SecurityIncident {
   titleBn: string;
   titleEn: string;
   severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
-  status: 'OPEN' | 'INVESTIGATING' | 'CONTAINED' | 'REMEDIATED' | 'CLOSED';
+  status: IncidentStatus;
   detectedAt: string;
+  isoDetectedAt?: string;
   resourceId: string;
   resourceType: string;
   resourceTitle: string;
@@ -378,6 +477,9 @@ export interface SecurityIncident {
   controlsTriggered: string[];
   remediationOccurred: string;
   correlationId: string;
+  caseId?: string;
+  vulnerabilityId?: string;
+  auditId?: string;
   controlResponse: {
     tokenValidation: 'FAILED' | 'PASSED';
     rbacCheck: 'DENIED' | 'ALLOWED';

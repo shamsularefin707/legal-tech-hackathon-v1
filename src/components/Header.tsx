@@ -55,7 +55,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenLogin }) => {
             ডেমো পরিবেশ • সম্পূর্ণ কাল্পনিক তথ্য
           </span>
           <span className="text-gray-300 text-[11px] hidden md:inline">
-            সার্ভার সময়: ১১ সেপ্টেম্বর ২০২৬, সকাল ১০:১৫
+            সার্ভার সময়: ০৯ সেপ্টেম্বর ২০২৬, সকাল ১০:১৫
           </span>
         </div>
       </div>

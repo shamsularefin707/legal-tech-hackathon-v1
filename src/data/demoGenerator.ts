@@ -23,6 +23,8 @@ import { generateSyntheticLawyers } from './demoLawyers';
 import { generateSyntheticCases } from './demoCases';
 import { generateSyntheticSecurityEvents } from './demoSecurityEvents';
 import { generateSyntheticVulnerabilities } from './demoVulnerabilities';
+import { validateCompleteDataset, DataQualityReport } from '../services/dataQualityService';
+import { DEMO_SNAPSHOT_DATE } from '../utils/dateUtils';
 
 export interface CompleteDemoDataset {
   seed: number;
@@ -32,6 +34,7 @@ export interface CompleteDemoDataset {
   vulnerabilities: VulnerabilityItem[];
   auditLogs: AuditLogEntry[];
   generatedAt: string;
+  dataQualityReport: DataQualityReport;
   validationReport: {
     isValid: boolean;
     totalCases: number;
@@ -74,6 +77,17 @@ export function recalculateLawyerWorkloads(
     const workloadPercentage = Math.round((activeCases.length / lawyer.maxCaseLimit) * 100);
     const isOver = workloadPercentage >= 100;
 
+    let capacityStatus: 'UNDER_CAPACITY' | 'NORMAL' | 'NEAR_CAPACITY' | 'OVER_CAPACITY' = 'NORMAL';
+    if (workloadPercentage >= 100) {
+      capacityStatus = 'OVER_CAPACITY';
+    } else if (workloadPercentage >= 85) {
+      capacityStatus = 'NEAR_CAPACITY';
+    } else if (workloadPercentage < 60) {
+      capacityStatus = 'UNDER_CAPACITY';
+    } else {
+      capacityStatus = 'NORMAL';
+    }
+
     return {
       ...lawyer,
       currentActiveCases: activeCases.length,
@@ -83,6 +97,7 @@ export function recalculateLawyerWorkloads(
       overdueTasks,
       workloadPercentage,
       capacity: lawyer.maxCaseLimit,
+      capacityStatus,
       availability: isOver ? 'BUSY' : 'AVAILABLE',
       status: isOver ? 'BUSY' : 'ACTIVE',
     };
@@ -311,6 +326,13 @@ export function generateCompleteDemoDataset(
   ).length;
 
   const messages = [...caseVal.messages, ...lawyerVal.messages, ...relVal.messages];
+  const dataQualityReport = validateCompleteDataset(
+    cases,
+    lawyers,
+    securityEvents as any,
+    vulnerabilities,
+    auditLogs
+  );
 
   return {
     seed,
@@ -319,7 +341,8 @@ export function generateCompleteDemoDataset(
     securityEvents,
     vulnerabilities,
     auditLogs,
-    generatedAt: '১১ সেপ্টেম্বর ২০২৬, সকাল ১০:১৫',
+    generatedAt: `${DEMO_SNAPSHOT_DATE} ০৯:০৯:০৯`,
+    dataQualityReport,
     validationReport: {
       isValid: messages.length === 0,
       totalCases: cases.length,

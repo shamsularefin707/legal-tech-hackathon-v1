@@ -23,6 +23,9 @@ import {
 } from 'lucide-react';
 import { useLegalAid } from '../context/LegalAidContext';
 import { PriorityLevel, CaseStatus, CaseDocument } from '../types/legalAid';
+import { evaluateLawyersForCase } from '../services/lawyerRecommendation';
+import { calculateRisk } from '../services/riskEngine';
+import { calculateCaseSla } from '../services/slaEngine';
 
 export const CaseDetailView: React.FC = () => {
   const {
@@ -94,80 +97,31 @@ export const CaseDetailView: React.FC = () => {
     );
   }
 
-  // Recommendation engine logic (Section 12)
-  const evaluatedLawyers = lawyers.map((lawyer) => {
-    let score = 50;
-    const reasons: string[] = [];
+  // Recommendation engine logic (Section 12, 13) powered by evaluateLawyersForCase
+  const evaluatedLawyers = React.useMemo(() => {
+    return evaluateLawyersForCase(currentCase, lawyers).map((rec) => ({
+      lawyer: rec.lawyer,
+      score: rec.matchScore,
+      reasons: rec.reasons,
+      conflictDetected: !!rec.conflictWarning,
+      conflictWarning: rec.conflictWarning,
+      isOverloaded: rec.capacityStatus === 'OVER_CAPACITY',
+      capacityStatusBn: rec.capacityStatusBn,
+      isRecommended: rec.isRecommended,
+    }));
+  }, [currentCase, lawyers]);
 
-    // 1. Specialization match
-    const hasSpec = lawyer.specialisations.includes(currentCase.category);
-    if (hasSpec) {
-      score += 30;
-      reasons.push(
-        `${
-          currentCase.category === 'FAMILY'
-            ? 'পারিবারিক আইনে'
-            : currentCase.category === 'CRIMINAL'
-            ? 'ফৌজদারি আইনে'
-            : 'সংশ্লিষ্ট শাখায়'
-        } বিশেষায়িত`
-      );
-    } else {
-      reasons.push('অন্য শাখায় অভিজ্ঞ');
-    }
-
-    // 2. Workload check
-    const isOverloaded = lawyer.currentActiveCases >= lawyer.maxCaseLimit;
-    if (isOverloaded) {
-      score -= 35;
-      reasons.push(`বর্তমানে ${lawyer.currentActiveCases}টি মামলা (নির্ধারিত সীমা ${lawyer.maxCaseLimit} অতিক্রান্ত)`);
-    } else {
-      score += 15;
-      reasons.push(`বর্তমানে ${lawyer.currentActiveCases}টি মামলা (কাজের চাপ সহনশীল)`);
-    }
-
-    // 3. District suitability
-    if (lawyer.district === currentCase.district) {
-      score += 10;
-      reasons.push(`${currentCase.district} জেলার জন্য অনুমোদিত`);
-    }
-
-    // 4. Availability
-    if (lawyer.availability === 'AVAILABLE') {
-      reasons.push('আগামী ৭ দিনের মধ্যে প্রাপ্য');
-    } else {
-      score -= 10;
-      reasons.push('অন্যান্য শুনানিতে ব্যস্ত');
-    }
-
-    // 5. Conflict of Interest Check (Section 13)
-    const opposingName = currentCase.applicant.opposingPartyName;
-    const conflictDetected = lawyer.knownConflicts.some(
-      (c) =>
-        c.toLowerCase().includes(opposingName.toLowerCase()) ||
-        opposingName.toLowerCase().includes(c.toLowerCase())
-    );
-
-    if (conflictDetected) {
-      score = 0;
-      reasons.push(
-        `সম্ভাব্য স্বার্থের সংঘাত: পূর্বে প্রতিপক্ষ '${opposingName}'-এর পক্ষে কার্যক্রমে ছিলেন`
-      );
-    } else {
-      reasons.push('স্বার্থের সংঘাত পাওয়া যায়নি');
-    }
-
-    return {
-      lawyer,
-      score,
-      reasons,
-      conflictDetected,
-      isOverloaded,
-    };
-  });
-
-  // Sort: conflict free and highest score first
-  evaluatedLawyers.sort((a, b) => b.score - a.score);
+  // Case Risk and SLA Assessment powered by deterministic engines
+  const riskDetails = React.useMemo(() => calculateRisk(currentCase), [currentCase]);
+  const slaDetails = React.useMemo(
+    () =>
+      calculateCaseSla(
+        currentCase.applicationDate,
+        currentCase.priorityAssessment.calculatedPriority,
+        currentCase.category
+      ),
+    [currentCase]
+  );
 
   const handleAssignSubmit = (lawyerId: string) => {
     const res = assignLawyerToCase(currentCase.id, lawyerId, assignmentOverrideReason);
@@ -340,7 +294,7 @@ export const CaseDetailView: React.FC = () => {
               <span className="bg-emerald-200 text-emerald-900 text-[9px] font-bold px-1.5 py-0.2 rounded">সম্পন্ন</span>
             </div>
             <div className="font-bold text-gray-900 text-xs">যোগ্যতা যাচাই</div>
-            <div className="text-[10px] text-gray-600 mt-0.5">১০ সেপ্টে ২০২৬</div>
+            <div className="text-[10px] text-gray-600 mt-0.5">০৮ সেপ্টে ২০২৬</div>
             <div className="text-[9px] text-gray-500">এনআইডি ও আয় যাচাই</div>
           </div>
 
@@ -364,7 +318,7 @@ export const CaseDetailView: React.FC = () => {
               <span className="bg-emerald-200 text-emerald-900 text-[9px] font-bold px-1.5 py-0.2 rounded">সম্পন্ন</span>
             </div>
             <div className="font-bold text-gray-900 text-xs">প্রশাসনিক অনুমোদন</div>
-            <div className="text-[10px] text-gray-600 mt-0.5">১১ সেপ্টে ২০২৬</div>
+            <div className="text-[10px] text-gray-600 mt-0.5">০৯ সেপ্টে ২০২৬</div>
             <div className="text-[9px] text-gray-500">{currentCase.assignedOfficerName}</div>
           </div>
 
@@ -391,7 +345,7 @@ export const CaseDetailView: React.FC = () => {
             </div>
             <div className="font-bold text-gray-900 text-xs">আইনজীবী নিয়োগ</div>
             <div className="text-[10px] text-gray-600 mt-0.5 truncate">
-              {currentCase.assignedLawyerName ? currentCase.assignedLawyerName : 'বাকি ২ দিন (১৩ সেপ্টে)'}
+              {currentCase.assignedLawyerName ? currentCase.assignedLawyerName : 'বাকি ২ দিন (১১ সেপ্টে)'}
             </div>
             <div className="text-[9px] text-gray-500">
               {currentCase.assignedLawyerName ? 'দায়িত্ব অর্পিত' : 'ক্লিক করে নিয়োগ দিন →'}
@@ -604,12 +558,12 @@ export const CaseDetailView: React.FC = () => {
                   </div>
                   <div className="flex justify-between items-center text-[11px]">
                     <span className="text-gray-600">যোগ্যতা অনুমোদন:</span>
-                    <span className="font-semibold text-gray-800">১০ সেপ্টেম্বর ২০২৬</span>
+                    <span className="font-semibold text-gray-800">০৮ সেপ্টেম্বর ২০২৬</span>
                   </div>
                   <div className="flex justify-between items-center text-[11px]">
                     <span className="text-amber-800 font-semibold">আইনজীবী নিয়োগ সীমা:</span>
                     <span className="font-bold text-amber-900 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
-                      ১৩ সেপ্টেম্বর ২০২৬ (বাকি ২ দিন)
+                      ১১ সেপ্টেম্বর ২০২৬ (বাকি ২ দিন)
                     </span>
                   </div>
                   <div className="flex justify-between items-center text-[11px]">
@@ -679,7 +633,7 @@ export const CaseDetailView: React.FC = () => {
                       {currentCase.assignedLawyerName} ({currentCase.assignedLawyerBarNo})
                     </span>
                     <span className="text-gray-600 block text-[11px]">
-                      নিয়োগের তারিখ: {currentCase.assignedDate || '১১ সেপ্টেম্বর ২০২৬'}
+                      নিয়োগের তারিখ: {currentCase.assignedDate || '০৯ সেপ্টেম্বর ২০২৬'}
                     </span>
                   </div>
                 </div>
@@ -884,6 +838,87 @@ export const CaseDetailView: React.FC = () => {
                     </p>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Deterministic Risk & Demo SLA Engine Breakdown */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Deterministic Risk Assessment */}
+              <div className="border border-blue-200 bg-blue-50/40 p-3 rounded">
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="font-bold text-blue-950 text-xs flex items-center space-x-1.5">
+                    <ShieldAlert className="w-3.5 h-3.5 text-blue-800" />
+                    <span>গাণিতিক ঝুঁকি মূল্যায়ন (Deterministic Risk Engine)</span>
+                  </span>
+                  <span className="bg-blue-100 text-blue-900 border border-blue-300 font-bold px-1.5 py-0.5 rounded text-[10px]">
+                    স্কোর: {riskDetails.score}/১০০ ({riskDetails.levelBn})
+                  </span>
+                </div>
+                <p className="text-[11px] text-blue-900 mb-2">
+                  কোনো র্যান্ডম মান ব্যতীত সংরক্ষিত তথ্যের ওপর ভিত্তি করে নির্ধারিত ঝুঁকি ফ্যাক্টরসমূহ:
+                </p>
+                <div className="space-y-1.5">
+                  {riskDetails.factors.map((f, i) => (
+                    <div key={i} className="bg-white p-2 rounded border border-blue-100 text-[11px]">
+                      <div className="font-semibold text-gray-800 flex justify-between">
+                        <span>{f.title}</span>
+                        <span className="text-blue-900 font-bold">+{f.impact}</span>
+                      </div>
+                      <p className="text-gray-600 text-[10px] mt-0.5">{f.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Demo SLA Policy Engine */}
+              <div className="border border-indigo-200 bg-indigo-50/40 p-3 rounded">
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="font-bold text-indigo-950 text-xs flex items-center space-x-1.5">
+                    <Clock className="w-3.5 h-3.5 text-indigo-800" />
+                    <span>ডেমো এসএলএ পর্যবেক্ষণ (Demo SLA Engine)</span>
+                  </span>
+                  <span className="bg-indigo-100 text-indigo-900 border border-indigo-300 font-bold px-1.5 py-0.5 rounded text-[10px]">
+                    {slaDetails.slaStatusBn}
+                  </span>
+                </div>
+                <div className="space-y-2 mt-2">
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-gray-600">নির্ধারিত এসএলএ সময়সীমা:</span>
+                    <span className="font-bold text-gray-900">{slaDetails.configuredSlaDays} দিন</span>
+                  </div>
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-gray-600">লক্ষ্যমাত্রা তারিখ:</span>
+                    <span className="font-bold text-indigo-950">{slaDetails.slaTargetDate}</span>
+                  </div>
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-gray-600">অবশিষ্ট কর্মদিবস:</span>
+                    <span className={`font-bold ${slaDetails.slaRemainingDays <= 3 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                      {slaDetails.slaRemainingDays > 0 ? `${slaDetails.slaRemainingDays} দিন বাকি` : 'সময়সীমা অতিক্রান্ত'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-[10px] text-gray-600 mb-0.5">
+                      <span>সময়সীমা ব্যবহার (SLA Consumed):</span>
+                      <span className="font-bold text-indigo-900">{slaDetails.slaConsumedPercentage}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                      <div
+                        className={`h-full ${
+                          slaDetails.slaConsumedPercentage > 85
+                            ? 'bg-red-600'
+                            : slaDetails.slaConsumedPercentage > 60
+                            ? 'bg-amber-500'
+                            : 'bg-emerald-600'
+                        }`}
+                        style={{ width: `${Math.min(100, slaDetails.slaConsumedPercentage)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-gray-500 italic mt-1">
+                    * এটি সিমুলেটেড ডেমো এসএলএ (Demo SLA Policy); আদালতের আনুষ্ঠানিক তামাদি সময়সীমা এর অধীন নয়।
+                  </p>
+                </div>
               </div>
             </div>
 

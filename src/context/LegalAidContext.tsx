@@ -27,6 +27,9 @@ import {
   DEFAULT_DEMO_DATA_SEED,
   CompleteDemoDataset,
 } from '../data/demoGenerator';
+import { createAuditTrailEntry } from '../services/auditService';
+import { advanceVulnerabilityStage } from '../services/vulnerabilityLifecycle';
+import { DEMO_SNAPSHOT_DATE, getDemoTimestampString } from '../utils/dateUtils';
 
 export interface NotificationItem {
   id: string;
@@ -201,7 +204,7 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     {
       id: 'notif-4',
       title: 'একটি বাহ্যিক অননুমোদিত নথি রিড চেষ্টা নিরাপত্তা ফিল্টারে প্রতিহত হয়েছে।',
-      time: '১১ সেপ্টেম্বর ২০২৬',
+      time: '০৯ সেপ্টেম্বর ২০২৬',
       type: 'URGENT',
       read: false,
     },
@@ -239,22 +242,16 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return { allowed: false, reason: 'অননুমোদিত ভূমিকা।' };
   };
 
-  // Helper to log audit entries immutably
+  // Helper to log audit entries immutably using auditService
   const logAudit = (entry: Omit<AuditLogEntry, 'id' | 'timestamp'>) => {
-    const now = new Date();
-    const formattedDate = `১১ সেপ্টেম্বর ২০২৬, ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-    const newEntry: AuditLogEntry = {
-      id: `aud-${Date.now().toString().slice(-5)}`,
-      timestamp: formattedDate,
-      ...entry,
-    };
+    const formattedDate = `০৯ সেপ্টেম্বর ২০২৬, ${getDemoTimestampString()}`;
+    const newEntry = createAuditTrailEntry(entry, formattedDate);
     setAuditLogs((prev) => [newEntry, ...prev]);
   };
 
   // Helper to log security events
   const logSecurity = (event: Omit<SecurityEvent, 'id' | 'timestamp'>) => {
-    const now = new Date();
-    const formattedDate = `১১ সেপ্টেম্বর ২০২৬, ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    const formattedDate = `০৯ সেপ্টেম্বর ২০২৬, ${getDemoTimestampString()}`;
     const newSecEvent: SecurityEvent = {
       id: `sec-${Date.now().toString().slice(-4)}`,
       timestamp: formattedDate,
@@ -519,14 +516,25 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setVulnerabilities((prev) =>
       prev.map((v) => {
         if (v.id === vulnId) {
-          const updatedLifecycle = v.lifecycle.map((stg) =>
-            stg.stage === stageKey ? { ...stg, status } : stg
-          );
-          return { ...v, lifecycle: updatedLifecycle };
+          return advanceVulnerabilityStage(v, stageKey, status);
         }
         return v;
       })
     );
+
+    const targetVuln = vulnerabilities.find((v) => v.id === vulnId);
+    logAudit({
+      user: currentUser.name,
+      role: currentUser.designation,
+      action: 'ভালনারেবিলিটি লাইফসাইকেল ধাপ হালনাগাদ',
+      resourceType: 'নিরাপত্তা',
+      resourceId: targetVuln ? targetVuln.id : vulnId,
+      nextState: `${stageKey}: ${status}`,
+      outcome: 'সফল',
+      ipAddress: '192.168.10.12',
+      districtScope: 'জাতীয়',
+      details: `ভালনারেবিলিটি ${targetVuln?.id || vulnId} এর ${stageKey} ধাপ ${status} এ পরিবর্তিত হয়েছে।`,
+    });
   };
 
   // Justice Operations: Assign Lawyer Workflow
@@ -588,7 +596,7 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // Update Case
     const updatedTimelineItem = {
       id: `tl-${Date.now()}`,
-      date: '১১ সেপ্টেম্বর ২০২৬',
+      date: '০৯ সেপ্টেম্বর ২০২৬',
       time: 'সকাল ১০:৩০',
       user: currentUser.name,
       role: currentUser.designation,
@@ -608,8 +616,8 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             assignedLawyerId: selectedLawyer.id,
             assignedLawyerName: selectedLawyer.name,
             assignedLawyerBarNo: selectedLawyer.barRegNo,
-            assignedDate: '১১ সেপ্টেম্বর ২০২৬',
-            lastActivityDate: '১১ সেপ্টেম্বর ২০২৬',
+            assignedDate: '০৯ সেপ্টেম্বর ২০২৬',
+            lastActivityDate: '০৯ সেপ্টেম্বর ২০২৬',
             daysWithoutActivity: 0,
             timeline: [updatedTimelineItem, ...c.timeline],
             deadlines: c.deadlines.map((d) =>
@@ -672,7 +680,7 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const prevPriority = c.priorityAssessment.calculatedPriority;
           const timelineEntry = {
             id: `tl-${Date.now()}`,
-            date: '১১ সেপ্টেম্বর ২০২৬',
+            date: '০৯ সেপ্টেম্বর ২০২৬',
             time: 'সকাল ১১:০০',
             user: currentUser.name,
             role: currentUser.designation,
@@ -683,7 +691,7 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
           return {
             ...c,
-            lastActivityDate: '১১ সেপ্টেম্বর ২০২৬',
+            lastActivityDate: '০৯ সেপ্টেম্বর ২০২৬',
             timeline: [timelineEntry, ...c.timeline],
             priorityAssessment: {
               ...c.priorityAssessment,
@@ -693,7 +701,7 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 officerName: currentUser.name,
                 officerRole: currentUser.designation,
                 reason,
-                timestamp: '১১ সেপ্টেম্বর ২০২৬, সকাল ১১:০০',
+                timestamp: '০৯ সেপ্টেম্বর ২০২৬, সকাল ১১:০০',
               },
             },
           };
@@ -726,7 +734,7 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (c.id === caseId) {
           const timelineEntry = {
             id: `tl-${Date.now()}`,
-            date: '১১ সেপ্টেম্বর ২০২৬',
+            date: '০৯ সেপ্টেম্বর ২০২৬',
             time: 'দুপুর ১২:০০',
             user: currentUser.name,
             role: currentUser.designation,
@@ -737,7 +745,7 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           return {
             ...c,
             status: newStatus,
-            lastActivityDate: '১১ সেপ্টেম্বর ২০২৬',
+            lastActivityDate: '০৯ সেপ্টেম্বর ২০২৬',
             daysWithoutActivity: 0,
             timeline: [timelineEntry, ...c.timeline],
           };
@@ -787,7 +795,7 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       category: docData.category,
       fileName: `SEC_${Date.now()}_${docData.fileName}`,
       fileSizeBytes: docData.fileSizeBytes,
-      uploadedAt: '১১ সেপ্টেম্বর ২০২৬, ১২:১৫',
+      uploadedAt: '০৯ সেপ্টেম্বর ২০২৬, ১২:১৫',
       uploadedBy: `${currentUser.name} (${currentUser.designation})`,
       mimeType: docData.mimeType,
       securityHash: `sha256:${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}89a7`,
@@ -801,12 +809,12 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           return {
             ...c,
             documents: [newDoc, ...c.documents],
-            lastActivityDate: '১১ সেপ্টেম্বর ২০২৬',
+            lastActivityDate: '০৯ সেপ্টেম্বর ২০২৬',
             daysWithoutActivity: 0,
             timeline: [
               {
                 id: `tl-${Date.now()}`,
-                date: '১১ সেপ্টেম্বর ২০২৬',
+                date: '০৯ সেপ্টেম্বর ২০২৬',
                 time: 'দুপুর ১২:১৫',
                 user: currentUser.name,
                 role: currentUser.designation,

@@ -89,7 +89,7 @@ export function generateSyntheticSecurityEvents(
     const targetCase = rng.pick(cases);
     const targetLawyer = rng.pick(lawyers);
 
-    const day = rng.nextInt(1, 10);
+    const day = rng.nextInt(1, 9);
     const hour = rng.nextInt(8, 17);
     const minute = rng.nextInt(10, 59);
 
