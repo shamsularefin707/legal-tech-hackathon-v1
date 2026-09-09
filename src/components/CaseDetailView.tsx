@@ -38,9 +38,10 @@ export const CaseDetailView: React.FC = () => {
     updateCaseStatus,
     addDocumentToCase,
     simulateDownloadDocument,
+    auditLogs,
   } = useLegalAid();
 
-  const [activeTab, setActiveTab] = useState<string>('lawyer-assignment'); // Default directly to assignment or summary for testing
+  const [activeTab, setActiveTab] = useState<string>('summary'); // Default to summary & lifecycle
   const [overridePriorityInput, setOverridePriorityInput] = useState<PriorityLevel>('VERY_HIGH');
   const [overrideReasonInput, setOverrideReasonInput] = useState('');
   const [showOverrideForm, setShowOverrideForm] = useState(false);
@@ -305,18 +306,151 @@ export const CaseDetailView: React.FC = () => {
         </div>
       </div>
 
+      {/* Formal Case Lifecycle Stepper (NALSA / National Legal Aid 7-Stage Pipeline) */}
+      <div className="bg-white border border-gray-300 p-3.5 rounded-sm shadow-2xs">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 mb-2.5 border-b border-gray-200 pb-2">
+          <div className="flex items-center space-x-2">
+            <Scale className="w-4 h-4 text-[#172554]" />
+            <h3 className="font-bold text-gray-900 text-xs uppercase tracking-wide">
+              মামলা ব্যবস্থাপনা জীবনচক্র (Justice Operations Lifecycle)
+            </h3>
+          </div>
+          <span className="text-[11px] text-gray-500 font-medium">
+            আইনগত সহায়তা নীতিমালা অনুযায়ী ৭টি সুনির্দিষ্ট ধাপ
+          </span>
+        </div>
+
+        {/* 7 Lifecycle Stages */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 text-xs">
+          {/* Stage 1: Application */}
+          <div className="p-2 rounded border border-emerald-300 bg-emerald-50/50">
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-mono text-[10px] font-bold text-emerald-800">ধাপ ১</span>
+              <span className="bg-emerald-200 text-emerald-900 text-[9px] font-bold px-1.5 py-0.2 rounded">সম্পন্ন</span>
+            </div>
+            <div className="font-bold text-gray-900 text-xs">আবেদন গ্রহণ</div>
+            <div className="text-[10px] text-gray-600 mt-0.5">০৯ সেপ্টে ২০২৬</div>
+            <div className="text-[9px] text-gray-500">অনলাইন পোর্টাল</div>
+          </div>
+
+          {/* Stage 2: Verification */}
+          <div className="p-2 rounded border border-emerald-300 bg-emerald-50/50">
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-mono text-[10px] font-bold text-emerald-800">ধাপ ২</span>
+              <span className="bg-emerald-200 text-emerald-900 text-[9px] font-bold px-1.5 py-0.2 rounded">সম্পন্ন</span>
+            </div>
+            <div className="font-bold text-gray-900 text-xs">যোগ্যতা যাচাই</div>
+            <div className="text-[10px] text-gray-600 mt-0.5">১০ সেপ্টে ২০২৬</div>
+            <div className="text-[9px] text-gray-500">এনআইডি ও আয় যাচাই</div>
+          </div>
+
+          {/* Stage 3: Priority */}
+          <div className="p-2 rounded border border-emerald-300 bg-emerald-50/50">
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-mono text-[10px] font-bold text-emerald-800">ধাপ ৩</span>
+              <span className="bg-emerald-200 text-emerald-900 text-[9px] font-bold px-1.5 py-0.2 rounded">সম্পন্ন</span>
+            </div>
+            <div className="font-bold text-gray-900 text-xs">অগ্রাধিকার নিরূপণ</div>
+            <div className="text-[10px] text-gray-600 mt-0.5">স্কোর: {currentCase.priorityAssessment.score}/১০০</div>
+            <div className="text-[9px] text-gray-500">
+              {currentCase.priorityAssessment.calculatedPriority === 'VERY_HIGH' ? 'অতি উচ্চ অগ্রাধিকার' : 'উচ্চ অগ্রাধিকার'}
+            </div>
+          </div>
+
+          {/* Stage 4: Approval */}
+          <div className="p-2 rounded border border-emerald-300 bg-emerald-50/50">
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-mono text-[10px] font-bold text-emerald-800">ধাপ ৪</span>
+              <span className="bg-emerald-200 text-emerald-900 text-[9px] font-bold px-1.5 py-0.2 rounded">সম্পন্ন</span>
+            </div>
+            <div className="font-bold text-gray-900 text-xs">প্রশাসনিক অনুমোদন</div>
+            <div className="text-[10px] text-gray-600 mt-0.5">১১ সেপ্টে ২০২৬</div>
+            <div className="text-[9px] text-gray-500">{currentCase.assignedOfficerName}</div>
+          </div>
+
+          {/* Stage 5: Assignment */}
+          <div
+            onClick={() => setActiveTab('lawyer-assignment')}
+            className={`p-2 rounded border cursor-pointer transition-colors ${
+              currentCase.assignedLawyerName
+                ? 'border-emerald-300 bg-emerald-50/50 hover:bg-emerald-100/50'
+                : 'border-amber-400 bg-amber-50/80 hover:bg-amber-100/80 ring-1 ring-amber-300'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className={`font-mono text-[10px] font-bold ${
+                currentCase.assignedLawyerName ? 'text-emerald-800' : 'text-amber-900'
+              }`}>ধাপ ৫</span>
+              <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
+                currentCase.assignedLawyerName
+                  ? 'bg-emerald-200 text-emerald-900'
+                  : 'bg-amber-200 text-amber-900 animate-pulse'
+              }`}>
+                {currentCase.assignedLawyerName ? 'সম্পন্ন' : 'জরুরি অপেক্ষমাণ'}
+              </span>
+            </div>
+            <div className="font-bold text-gray-900 text-xs">আইনজীবী নিয়োগ</div>
+            <div className="text-[10px] text-gray-600 mt-0.5 truncate">
+              {currentCase.assignedLawyerName ? currentCase.assignedLawyerName : 'বাকি ২ দিন (১৩ সেপ্টে)'}
+            </div>
+            <div className="text-[9px] text-gray-500">
+              {currentCase.assignedLawyerName ? 'দায়িত্ব অর্পিত' : 'ক্লিক করে নিয়োগ দিন →'}
+            </div>
+          </div>
+
+          {/* Stage 6: Hearing */}
+          <div className={`p-2 rounded border ${
+            currentCase.hearings && currentCase.hearings.length > 0
+              ? 'border-blue-300 bg-blue-50/40'
+              : 'border-gray-200 bg-gray-50'
+          }`}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-mono text-[10px] font-bold text-blue-900">ধাপ ৬</span>
+              <span className="bg-blue-100 text-blue-900 text-[9px] font-bold px-1.5 py-0.2 rounded">
+                {currentCase.hearings && currentCase.hearings.length > 0 ? 'নির্ধারিত' : 'অপেক্ষমাণ'}
+              </span>
+            </div>
+            <div className="font-bold text-gray-900 text-xs">শুনানি / মধ্যস্থতা</div>
+            <div className="text-[10px] text-gray-600 mt-0.5">
+              {currentCase.hearings && currentCase.hearings.length > 0
+                ? currentCase.hearings[0].date
+                : 'তারিখ অপেক্ষমাণ'}
+            </div>
+            <div className="text-[9px] text-gray-500 truncate">{currentCase.courtName}</div>
+          </div>
+
+          {/* Stage 7: Disposal */}
+          <div className={`p-2 rounded border ${
+            currentCase.status === 'DISPOSED'
+              ? 'border-emerald-300 bg-emerald-50/50'
+              : 'border-gray-200 bg-gray-50'
+          }`}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-mono text-[10px] font-bold text-gray-600">ধাপ ৭</span>
+              <span className="bg-gray-200 text-gray-700 text-[9px] font-bold px-1.5 py-0.2 rounded">
+                {currentCase.status === 'DISPOSED' ? 'নিষ্পন্ন' : 'অপেক্ষমাণ'}
+              </span>
+            </div>
+            <div className="font-bold text-gray-900 text-xs">চূড়ান্ত নিষ্পত্তি</div>
+            <div className="text-[10px] text-gray-600 mt-0.5">আদেশ ও বাস্তবায়ন</div>
+            <div className="text-[9px] text-gray-500">বিচারিক নথি সমর্পণ</div>
+          </div>
+        </div>
+      </div>
+
       {/* Tabs Navigation (Section 9) */}
       <div className="bg-white border border-gray-300 rounded-sm">
         <div className="flex border-b border-gray-200 overflow-x-auto text-xs font-semibold bg-gray-50">
           {[
+            { id: 'summary', label: 'সারসংক্ষেপ ও জীবনচক্র' },
             { id: 'lawyer-assignment', label: 'আইনজীবী নিয়োগ (LADCS ইঞ্জিন)' },
             { id: 'priority-scoring', label: 'অগ্রাধিকার নির্ধারণ সহায়ক' },
-            { id: 'timeline', label: 'কার্যক্রম ও সময়রেখা (টাইমলাইন)' },
+            { id: 'timeline', label: 'ধারাবাহিক সময়রেখা' },
+            { id: 'hearings', label: 'শুনানি ও সময়সীমা' },
             { id: 'applicant', label: 'আবেদনকারী ও সুরক্ষা' },
-            { id: 'details', label: 'মামলার বিবরণ ও আরজি' },
-            { id: 'hearings', label: 'শুনানি ও মধ্যস্থতা' },
+            { id: 'details', label: 'মামলার আরজি ও বিধান' },
             { id: 'documents', label: `নথিপত্র (${currentCase.documents.length})` },
-            { id: 'audit-trail', label: 'কার্যক্রমের রেকর্ড (অডিট)' },
+            { id: 'audit-trail', label: 'মামলার অডিট ট্রেইল' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -331,6 +465,173 @@ export const CaseDetailView: React.FC = () => {
             </button>
           ))}
         </div>
+
+        {/* TAB 0: সারসংক্ষেপ ও জীবনচক্র (Executive Summary & Case Dossier) */}
+        {activeTab === 'summary' && (
+          <div className="p-4 space-y-4 text-xs">
+            {/* Urgent Action Callout */}
+            {!currentCase.assignedLawyerName ? (
+              <div className="bg-amber-50 border border-amber-300 p-3.5 rounded flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div className="flex items-start space-x-2.5">
+                  <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold text-amber-950 text-xs">
+                      জরুরি প্রশাসনিক পদক্ষেপ আবশ্যক: প্যানেল আইনজীবী নিয়োগ অনুমোদন অপেক্ষমাণ
+                    </div>
+                    <p className="text-[11px] text-amber-900 mt-0.5">
+                      জাতীয় আইনগত সহায়তা বিধিমোতাবেক আগামী ১৩ সেপ্টেম্বর ২০২৬-এর মধ্যে প্যানেল আইনজীবী নির্বাচন ও সম্মতি গ্রহণ নিশ্চিত করতে হবে (বাকি মাত্র ২ দিন)।
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveTab('lawyer-assignment')}
+                  className="px-3.5 py-1.5 bg-[#172554] text-white hover:bg-blue-900 text-xs font-bold rounded shrink-0 cursor-pointer"
+                >
+                  আইনজীবী নির্বাচন ট্যাবে যান →
+                </button>
+              </div>
+            ) : (
+              <div className="bg-emerald-50 border border-emerald-300 p-3 rounded flex items-center justify-between">
+                <div className="flex items-center space-x-2.5">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-700 shrink-0" />
+                  <div>
+                    <span className="font-bold text-emerald-950">আইনজীবী নিয়োগ সম্পন্ন হয়েছে: </span>
+                    <span className="font-semibold text-gray-900">
+                      {currentCase.assignedLawyerName} ({currentCase.assignedLawyerBarNo})
+                    </span>
+                    <p className="text-[11px] text-emerald-800 mt-0.5">
+                      পরবর্তী পদক্ষেপ: পারিবারিক আদালতে ওকালতনামা ও খোরপোষের অন্তর্বর্তীকালীন আবেদন দাখিল (১৮ সেপ্টেম্বর ২০২৬-এর মধ্যে)।
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveTab('timeline')}
+                  className="text-xs text-[#172554] font-bold hover:underline"
+                >
+                  টাইমলাইন দেখুন →
+                </button>
+              </div>
+            )}
+
+            {/* Structured Administrative Dossier */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {/* Dossier Card 1: Case Core Pleading */}
+              <div className="border border-gray-300 p-3.5 rounded bg-white space-y-2">
+                <h4 className="font-bold text-gray-900 text-xs border-b pb-1.5 flex items-center justify-between">
+                  <span>মামলার আরজি ও বিচারিক এখতিয়ার</span>
+                  <Scale className="w-3.5 h-3.5 text-gray-500" />
+                </h4>
+                <div>
+                  <span className="text-gray-500 block text-[11px]">বিচারিক আদালত:</span>
+                  <span className="font-bold text-gray-800">{currentCase.courtName}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 block text-[11px]">মামলার ধরন:</span>
+                  <span className="font-semibold text-gray-800">
+                    {currentCase.category === 'FAMILY'
+                      ? 'পারিবারিক আদালত মামলা'
+                      : currentCase.category === 'CRIMINAL'
+                      ? 'ফৌজদারি মামলা'
+                      : 'দেওয়ানি মামলা'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-500 block text-[11px]">প্রার্থিত প্রতিকার:</span>
+                  <span className="text-gray-700 leading-relaxed block text-[11px]">
+                    {currentCase.reliefSought}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-500 block text-[11px]">প্রযোজ্য আইনি বিধান:</span>
+                  <div className="flex flex-wrap gap-1 mt-0.5">
+                    {currentCase.legalIssues.slice(0, 2).map((issue, idx) => (
+                      <span key={idx} className="bg-gray-100 text-gray-800 text-[10px] px-1.5 py-0.5 rounded border">
+                        {issue}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Dossier Card 2: Litigant & Eligibility */}
+              <div className="border border-gray-300 p-3.5 rounded bg-white space-y-2">
+                <h4 className="font-bold text-gray-900 text-xs border-b pb-1.5 flex items-center justify-between">
+                  <span>আবেদনকারী ও সামাজিক দুর্বলতা সূচক</span>
+                  <Lock className="w-3.5 h-3.5 text-gray-500" />
+                </h4>
+                <div>
+                  <span className="text-gray-500 block text-[11px]">আবেদনকারীর নাম:</span>
+                  <span className="font-bold text-gray-800">{currentCase.applicant.name} ({currentCase.applicant.age} বছর)</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 block text-[11px]">মাস্কড এনআইডি ও মোবাইল:</span>
+                  <span className="font-mono text-gray-800 text-[11px]">
+                    NID: {currentCase.applicant.nidMasked} | সেল: {currentCase.applicant.phoneMasked}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-500 block text-[11px]">অর্থনৈতিক অবস্থা:</span>
+                  <span className="text-gray-800 font-medium">
+                    {currentCase.applicant.occupation} (মাসিক আয়: ৳{currentCase.applicant.monthlyIncome.toLocaleString('bn-BD')})
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-500 block text-[11px]">বিশেষ অগ্রাধিকার যোগ্যতা:</span>
+                  <div className="flex flex-wrap gap-1 mt-0.5">
+                    {currentCase.applicant.specialEligibility.map((tag, i) => (
+                      <span key={i} className="bg-blue-50 text-blue-900 border border-blue-200 px-1.5 py-0.2 rounded text-[10px] font-bold">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="pt-1 border-t border-gray-100">
+                  <span className="text-gray-500 block text-[11px]">প্রতিপক্ষ:</span>
+                  <span className="font-bold text-red-950">{currentCase.applicant.opposingPartyName}</span>
+                </div>
+              </div>
+
+              {/* Dossier Card 3: Administrative Milestones & Deadlines */}
+              <div className="border border-gray-300 p-3.5 rounded bg-white space-y-2">
+                <h4 className="font-bold text-gray-900 text-xs border-b pb-1.5 flex items-center justify-between">
+                  <span>কার্যক্রম ও নির্ধারিত সময়সীমা (Deadlines)</span>
+                  <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                </h4>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-gray-600">আবেদন গ্রহণ:</span>
+                    <span className="font-semibold text-gray-800">{currentCase.applicationDate}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-gray-600">যোগ্যতা অনুমোদন:</span>
+                    <span className="font-semibold text-gray-800">১০ সেপ্টেম্বর ২০২৬</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-amber-800 font-semibold">আইনজীবী নিয়োগ সীমা:</span>
+                    <span className="font-bold text-amber-900 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                      ১৩ সেপ্টেম্বর ২০২৬ (বাকি ২ দিন)
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-gray-600">ওকালতনামা দাখিল:</span>
+                    <span className="font-semibold text-gray-800">১৮ সেপ্টেম্বর ২০২৬</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-blue-900 font-semibold">প্রথম বিচারিক শুনানি:</span>
+                    <span className="font-bold text-blue-950 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
+                      ২২ সেপ্টেম্বর ২০২৬ (সকাল ১০:৩০)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-gray-200 flex items-center justify-between text-[11px]">
+                  <span className="text-gray-500">তদারক কর্মকর্তা:</span>
+                  <span className="font-bold text-gray-900">{currentCase.assignedOfficerName}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* TAB 1: আইনজীবী নিয়োগ (Section 12, 13, 14 - Heart of Hackathon Demo) */}
         {activeTab === 'lawyer-assignment' && (
@@ -850,6 +1151,53 @@ export const CaseDetailView: React.FC = () => {
                 ))}
               </div>
             )}
+
+            {/* Statutory Compliance Deadlines */}
+            <div className="mt-4 pt-3 border-t border-gray-200">
+              <h5 className="font-bold text-gray-900 mb-2 flex items-center justify-between">
+                <span>মামলার বিধিবদ্ধ সময়সীমা ও অগ্রগতি (Statutory Compliance Deadlines)</span>
+                <span className="text-gray-500 font-normal text-[11px]">আইনগত সময়সীমা অতিক্রম প্রতিরোধ ব্যবস্থা</span>
+              </h5>
+              <div className="border border-gray-200 rounded overflow-hidden">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-gray-100 text-gray-700 font-bold border-b">
+                    <tr>
+                      <th className="py-2 px-3">করণীয় কার্যক্রম</th>
+                      <th className="py-2 px-3">সময়সীমা (Deadline)</th>
+                      <th className="py-2 px-3">দায়িত্বপ্রাপ্ত</th>
+                      <th className="py-2 px-3">অবস্থা</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {currentCase.deadlines.map((dl) => (
+                      <tr key={dl.id} className="hover:bg-gray-50">
+                        <td className="py-2 px-3 font-medium text-gray-800">{dl.actionRequired}</td>
+                        <td className="py-2 px-3 font-semibold text-gray-700">
+                          {dl.dueDate}
+                          {dl.daysRemaining !== undefined && dl.status === 'PENDING' && (
+                            <span className="ml-1 text-[10px] text-amber-800 font-bold bg-amber-50 border border-amber-200 px-1 rounded">
+                              (বাকি {dl.daysRemaining} দিন)
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2 px-3 text-gray-600">{dl.assignedOfficer || dl.assignedLawyer || 'দায়িত্বপ্রাপ্ত কর্মকর্তা'}</td>
+                        <td className="py-2 px-3">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            dl.status === 'MET'
+                              ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                              : dl.status === 'URGENT'
+                              ? 'bg-red-100 text-red-900 border border-red-300'
+                              : 'bg-amber-100 text-amber-900 border border-amber-300'
+                          }`}>
+                            {dl.status === 'MET' ? 'সম্পন্ন' : dl.status === 'URGENT' ? 'অতীব জরুরি' : 'চলমান'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 
@@ -915,36 +1263,66 @@ export const CaseDetailView: React.FC = () => {
         {/* TAB 8: অডিট ট্রেইল */}
         {activeTab === 'audit-trail' && (
           <div className="p-4 space-y-3 text-xs">
-            <h4 className="font-bold text-gray-900 text-sm">মামলা সংশ্লিষ্ট অডিট রেকর্ড</h4>
+            <div className="flex justify-between items-center border-b pb-2">
+              <div>
+                <h4 className="font-bold text-gray-900 text-sm">মামলা সংশ্লিষ্ট অডিট রেকর্ড (Case-Specific Audit Trail)</h4>
+                <p className="text-[11px] text-gray-500">
+                  মামলা নং {currentCase.caseNumber}-এর সকল বিচারিক ও প্রশাসনিক কার্যক্রমের অপরিবর্তনীয় ডিজিটাল লগবুক
+                </p>
+              </div>
+              <span className="text-emerald-800 text-[11px] font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+                SHA-256 অখণ্ডতা সুরক্ষিত
+              </span>
+            </div>
+
             <div className="border border-gray-200 rounded overflow-hidden">
               <table className="w-full text-left text-xs">
                 <thead className="bg-gray-100 text-gray-700 font-bold border-b">
                   <tr>
                     <th className="py-2 px-3">তারিখ ও সময়</th>
-                    <th className="py-2 px-3">কার্যক্রম</th>
-                    <th className="py-2 px-3">ব্যবহারকারী</th>
+                    <th className="py-2 px-3">কার্যক্রম ও বিবরণ</th>
+                    <th className="py-2 px-3">ব্যবহারকারী ও পদবি</th>
+                    <th className="py-2 px-3">আইপি / অবস্থান</th>
                     <th className="py-2 px-3">ফলাফল</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  <tr className="hover:bg-gray-50">
-                    <td className="py-2 px-3 text-gray-600">১১ সেপ্টেম্বর ২০২৬, ১০:১৫:২২</td>
-                    <td className="py-2 px-3 font-semibold text-gray-800">প্যানেল আইনজীবী নিয়োগ নিরীক্ষা</td>
-                    <td className="py-2 px-3 text-gray-700">{currentUser.name}</td>
-                    <td className="py-2 px-3 text-emerald-800 font-bold">সফল</td>
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="py-2 px-3 text-gray-600">১০ সেপ্টেম্বর ২০২৬, ১৪:২০:১০</td>
-                    <td className="py-2 px-3 font-semibold text-gray-800">যোগ্যতা অনুমোদন</td>
-                    <td className="py-2 px-3 text-gray-700">মো. মাহবুবুর রহমান</td>
-                    <td className="py-2 px-3 text-emerald-800 font-bold">সফল</td>
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="py-2 px-3 text-gray-600">০৯ সেপ্টেম্বর ২০২৬, ১০:১৫:২২</td>
-                    <td className="py-2 px-3 font-semibold text-gray-800">আবেদন গ্রহণ ও নথিভুক্তি</td>
-                    <td className="py-2 px-3 text-gray-700">মো. সাইদুল ইসলাম</td>
-                    <td className="py-2 px-3 text-emerald-800 font-bold">সফল</td>
-                  </tr>
+                  {auditLogs
+                    .filter((log) => log.resourceId.includes(currentCase.caseNumber) || log.resourceId.includes(currentCase.id))
+                    .map((log) => (
+                      <tr key={log.id} className="hover:bg-gray-50">
+                        <td className="py-2 px-3 text-gray-600 font-mono text-[11px] whitespace-nowrap">
+                          {log.timestamp}
+                        </td>
+                        <td className="py-2 px-3">
+                          <div className="font-semibold text-gray-900">{log.action}</div>
+                          {log.details && (
+                            <div className="text-[11px] text-gray-600 mt-0.5">{log.details}</div>
+                          )}
+                          {log.previousState && log.nextState && (
+                            <div className="text-[10px] text-blue-900 font-mono mt-0.5">
+                              {log.previousState} ➔ {log.nextState}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-2 px-3 text-gray-700">
+                          <div className="font-medium">{log.user}</div>
+                          <div className="text-[10px] text-gray-500">{log.role}</div>
+                        </td>
+                        <td className="py-2 px-3 text-gray-600 font-mono text-[11px]">
+                          {log.ipAddress} ({log.districtScope})
+                        </td>
+                        <td className="py-2 px-3 whitespace-nowrap">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            log.outcome === 'সফল'
+                              ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                              : 'bg-red-100 text-red-900 border border-red-300'
+                          }`}>
+                            {log.outcome}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>

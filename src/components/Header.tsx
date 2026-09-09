@@ -48,37 +48,33 @@ export const Header: React.FC<HeaderProps> = ({ onOpenLogin }) => {
           <span className="text-gray-200">জাতীয় আইনগত সহায়তা কার্যক্রম</span>
         </div>
         <div className="flex items-center space-x-4">
-          <span className="bg-blue-900/80 px-2 py-0.5 border border-blue-700 text-blue-100 rounded text-[11px]">
-            ডেমো পরিবেশ / নমুনা তথ্য
+          <span className="bg-blue-900/90 px-2 py-0.5 border border-blue-700 text-amber-200 rounded text-[11px] font-semibold">
+            ডেমো পরিবেশ
           </span>
           <span className="text-gray-300 text-[11px]">
-            সার্ভার সময়: ০৯ সেপ্টেম্বর ২০২৬, সকাল ১০:১৫
+            সার্ভার সময়: ১১ সেপ্টেম্বর ২০২৬, সকাল ১০:১৫
           </span>
         </div>
       </div>
 
       {/* Main Bar */}
       <div className="px-4 py-2.5 flex items-center justify-between">
-        {/* Left: Emblem & Institution Title */}
+        {/* Left: Emblem Placeholder & Institution Title */}
         <div className="flex items-center space-x-3.5">
-          {/* Government Emblem Placeholder */}
-          <div className="w-10 h-10 rounded-full border-2 border-[#172554] bg-[#f8fafc] flex items-center justify-center p-1 shadow-xs shrink-0">
+          {/* Institutional Scales Placeholder */}
+          <div className="w-10 h-10 rounded-sm border border-gray-400 bg-slate-100 flex items-center justify-center p-1.5 shadow-xs shrink-0 text-[#172554]">
             <svg
-              viewBox="0 0 100 100"
-              className="w-full h-full text-[#172554] fill-current"
-              aria-label="বাংলাদেশ জাতীয় প্রতীক চিহ্ন"
+              viewBox="0 0 24 24"
+              className="w-full h-full stroke-current fill-none stroke-2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-label="আইন ও বিচার বিভাগ প্রতীক"
             >
-              <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="4" />
-              <circle cx="50" cy="50" r="38" fill="#15803d" />
-              <circle cx="50" cy="50" r="14" fill="#dc2626" />
-              <path
-                d="M50 16 L53 26 L63 26 L55 32 L58 42 L50 36 L42 42 L45 32 L37 26 L47 26 Z"
-                fill="#facc15"
-              />
-              <path
-                d="M20 70 Q 50 90 80 70 Q 50 78 20 70 Z"
-                fill="#facc15"
-              />
+              <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" />
+              <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" />
+              <path d="M7 21h10" />
+              <path d="M12 3v18" />
+              <path d="M3 7h18" />
             </svg>
           </div>
 
@@ -89,8 +85,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenLogin }) => {
             <h1 className="text-base sm:text-lg font-bold text-[#172554] leading-tight">
               জাতীয় আইনগত সহায়তা কার্যক্রম ব্যবস্থাপনা
             </h1>
-            <div className="text-[11px] text-gray-500 font-medium">
-              জেলা আইনগত সহায়তা কার্যালয়, ঢাকা
+            <div className="text-[11px] text-gray-600 font-medium">
+              আইন ও বিচার বিভাগ | জেলা আইনগত সহায়তা কার্যালয়, ঢাকা
             </div>
           </div>
         </div>

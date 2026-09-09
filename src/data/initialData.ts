@@ -413,8 +413,8 @@ export const INITIAL_CASES: LegalAidCase[] = [
       'আবেদনকারীর পৈতৃক বসতভিটা জবরদখলের বিরুদ্ধে স্বত্ব ঘোষণা ও স্থায়ী নিষেধাজ্ঞার দেওয়ানি মোকদ্দমা। বিগত শুনানিতে বিবাদী পক্ষ সময় প্রার্থনা করেছিল।',
     reliefSought: 'পৈতৃক ভিটার স্বত্ব ঘোষণা এবং বিবাদীদের অনধিকার প্রবেশ রোধে স্থায়ী নিষেধাজ্ঞা',
     legalIssues: ['সুনির্দিষ্ট প্রতিকার আইন, ১৮৭৭-এর ৪২ ও ৫৪ ধারা', 'পৈতৃক দলিলের রেকর্ডীয় মালিকানা নির্ধারণ'],
-    lastActivityDate: '০১ সেপ্টেম্বর ২০২৬',
-    daysWithoutActivity: 8, // Stuck Case Trigger!
+    lastActivityDate: '০৩ সেপ্টেম্বর ২০২৬',
+    daysWithoutActivity: 8, // Stuck Case Trigger (৮ দিন যাবৎ কার্যক্রমহীন)
     applicant: {
       id: 'app-1219',
       name: 'মো. আব্দুল করিম',
@@ -446,8 +446,8 @@ export const INITIAL_CASES: LegalAidCase[] = [
       {
         id: 'dl-1219-1',
         title: 'মামলার সার্বিক অগ্রগতি প্রতিবেদন দাখিল',
-        dueDate: '০৫ সেপ্টেম্বর ২০২৬',
-        daysRemaining: -4,
+        dueDate: '০৮ সেপ্টেম্বর ২০২৬',
+        daysRemaining: -3,
         category: 'OVERDUE',
         assignedOfficer: 'মো. মাহবুবুর রহমান',
         assignedLawyer: 'মো. রাকিব হাসান',
@@ -512,7 +512,7 @@ export const INITIAL_CASES: LegalAidCase[] = [
     summary: 'চুক্তি প্রবল সংক্রান্ত দেওয়ানি বিরোধ। বিবাদীর বিরুদ্ধে প্রতিকার চেয়ে প্রতিকার প্রার্থনা।',
     reliefSought: 'রেজিস্ট্রিকৃত বায়না চুক্তি বাস্তবায়ন',
     legalIssues: ['সুনির্দিষ্ট প্রতিকার আইনের ধারা ১২'],
-    lastActivityDate: '০৩ সেপ্টেম্বর ২০২৬',
+    lastActivityDate: '০৫ সেপ্টেম্বর ২০২৬',
     daysWithoutActivity: 6,
     applicant: {
       id: 'app-1190',
@@ -545,7 +545,7 @@ export const INITIAL_CASES: LegalAidCase[] = [
       {
         id: 'dl-1190-1',
         title: 'লিখিত আপত্তি দাখিল',
-        dueDate: '০৬ সেপ্টেম্বর ২০২৬',
+        dueDate: '০৮ সেপ্টেম্বর ২০২৬',
         daysRemaining: -3,
         category: 'OVERDUE',
         assignedOfficer: 'মো. মাহবুবুর রহমান',
@@ -559,7 +559,7 @@ export const INITIAL_CASES: LegalAidCase[] = [
     timeline: [
       {
         id: 'tl-1190-1',
-        date: '০৩ সেপ্টেম্বর ২০২৬',
+        date: '০৫ সেপ্টেম্বর ২০২৬',
         time: 'সকাল ১১:০০',
         user: 'মো. মাহবুবুর রহমান',
         role: 'জেলা আইনগত সহায়তা কর্মকর্তা',
@@ -585,7 +585,7 @@ export const INITIAL_CASES: LegalAidCase[] = [
     summary: 'মিথ্যা অভিযোগে দায়েরকৃত ফৌজদারি মামলায় হাজতি আসামির জামিন ও আইনি সহায়তা প্রার্থনা।',
     reliefSought: 'নিয়মিত জামিনের আবেদন মঞ্জুর',
     legalIssues: ['ফৌজদারি কার্যবিধি, ১৮৯৮-এর ৪৯৭ ধারা'],
-    lastActivityDate: '০৮ সেপ্টেম্বর ২০২৬',
+    lastActivityDate: '১০ সেপ্টেম্বর ২০২৬',
     daysWithoutActivity: 1,
     applicant: {
       id: 'app-1301',
@@ -615,7 +615,7 @@ export const INITIAL_CASES: LegalAidCase[] = [
         {
           title: 'শুনানির তারিখ অত্যন্ত নিকটবর্তী',
           impact: 'POSITIVE',
-          description: 'আগামীकल সিএমএম আদালতে জামিন শুনানির তারিখ ধার্য রয়েছে।',
+          description: 'আগামীকাল সিএমএম আদালতে জামিন শুনানির তারিখ ধার্য রয়েছে।',
         },
       ],
     },
@@ -623,7 +623,7 @@ export const INITIAL_CASES: LegalAidCase[] = [
       {
         id: 'dl-1301-1',
         title: 'আদালতে জামিন শুনানিতে উপস্থিতি ও সওয়াল-জবাব',
-        dueDate: '১০ সেপ্টেম্বর ২০২৬',
+        dueDate: '১২ সেপ্টেম্বর ২০২৬',
         daysRemaining: 1,
         category: 'URGENT',
         assignedOfficer: 'মো. মাহবুবুর রহমান',
@@ -632,7 +632,17 @@ export const INITIAL_CASES: LegalAidCase[] = [
         actionRequired: 'নথি পর্যালোচনা ও জামিনের স্বপক্ষে নজির উপস্থাপন',
       },
     ],
-    hearings: [],
+    hearings: [
+      {
+        id: 'hr-1301-1',
+        date: '১২ সেপ্টেম্বর ২০২৬',
+        time: 'সকাল ১১:০০',
+        courtName: 'চিফ জুডিসিয়াল ম্যাজিস্ট্রেট আদালত, ঢাকা',
+        benchCourtNumber: 'আদালত ৩',
+        purpose: 'হাজতি জামিন শুনানি',
+        status: 'নির্ধারিত',
+      },
+    ],
     documents: [],
     timeline: [],
   },
@@ -652,8 +662,8 @@ export const INITIAL_CASES: LegalAidCase[] = [
     summary: 'যৌতুক দাবি ও শারীরিক নির্যাতনের অভিযোগে দায়েরকৃত ট্রাইব্যুনাল মোকদ্দমায় আইনগত সহায়তা।',
     reliefSought: 'বিচারিক সুরক্ষা ও আইনানুগ ক্ষতিপূরণ আদায়',
     legalIssues: ['নারী ও শিশু নির্যাতন দমন আইন, ২০০০ (সংশোধিত ২০০৩)-এর ১১(গ) ধারা'],
-    lastActivityDate: '০৭ সেপ্টেম্বর ২০২৬',
-    daysWithoutActivity: 2,
+    lastActivityDate: '০৮ সেপ্টেম্বর ২০২৬',
+    daysWithoutActivity: 3,
     applicant: {
       id: 'app-1305',
       name: 'সাবিনা ইয়াসমিন',
@@ -685,7 +695,7 @@ export const INITIAL_CASES: LegalAidCase[] = [
       {
         id: 'dl-1305-1',
         title: 'সাক্ষীদের হাজিরার সমন তদারকি',
-        dueDate: '১৪ সেপ্টেম্বর ২০২৬',
+        dueDate: '১৬ সেপ্টেম্বর ২০২৬',
         daysRemaining: 5,
         category: 'WITHIN_7_DAYS',
         assignedOfficer: 'মো. মাহবুবুর রহমান',
@@ -714,8 +724,8 @@ export const INITIAL_CASES: LegalAidCase[] = [
     summary: 'গার্মেন্টস শ্রমিকের বেআইনিভাবে চাকরিচ্যুতি ও বকেয়া বেতন-ভাতা আদায় সংক্রান্ত মোকদ্দমা।',
     reliefSought: 'বকেয়া মজুরি ও সার্ভিস বেনিফিট প্রদান',
     legalIssues: ['বাংলাদেশ শ্রম আইন, ২০০৬-এর ৩৩ ধারা মোতাবেক অভিযোগ'],
-    lastActivityDate: '০৬ সেপ্টেম্বর ২০২৬',
-    daysWithoutActivity: 3,
+    lastActivityDate: '০৭ সেপ্টেম্বর ২০২৬',
+    daysWithoutActivity: 4,
     applicant: {
       id: 'app-1310',
       name: 'মো. রফিকুল ইসলাম',
@@ -747,7 +757,7 @@ export const INITIAL_CASES: LegalAidCase[] = [
       {
         id: 'dl-1310-1',
         title: 'দ্বিতীয় দফা সমঝোতা বৈঠকের ফলাফল বিবরণী প্রস্তুত',
-        dueDate: '১৫ সেপ্টেম্বর ২০২৬',
+        dueDate: '১৭ সেপ্টেম্বর ২০২৬',
         daysRemaining: 6,
         category: 'WITHIN_7_DAYS',
         assignedOfficer: 'মো. মাহবুবুর রহমান',
