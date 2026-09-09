@@ -17,6 +17,10 @@ import { AuditLogView } from './components/AuditLogView';
 import { ReportsView } from './components/ReportsView';
 import { HearingsView } from './components/HearingsView';
 import { UsersView } from './components/UsersView';
+import { VulnerabilityManagementView } from './components/VulnerabilityManagementView';
+import { SecuritySimulationModal } from './components/SecuritySimulationModal';
+import { SecurityIncidentDetailModal } from './components/SecurityIncidentDetailModal';
+import { NikahnamaPreviewModal } from './components/NikahnamaPreviewModal';
 import { LoginModal } from './components/LoginModal';
 
 const AppContent: React.FC = () => {
@@ -41,11 +45,21 @@ const AppContent: React.FC = () => {
           {activeView === 'stuck-cases' && <DeadlinesView />}
           {activeView === 'hearings' && <HearingsView />}
           {activeView === 'reports' && <ReportsView />}
+          {activeView === 'vulnerabilities' && <VulnerabilityManagementView />}
           {activeView === 'security' && <SecurityView />}
           {activeView === 'audit-log' && <AuditLogView />}
           {activeView === 'users' && <UsersView />}
         </main>
       </div>
+
+      {/* Security Simulation Modal */}
+      <SecuritySimulationModal />
+
+      {/* Dedicated Security Incident Detail Modal */}
+      <SecurityIncidentDetailModal />
+
+      {/* Watermarked Evidence Document Preview Modal */}
+      <NikahnamaPreviewModal />
 
       {/* Government Login Modal */}
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />

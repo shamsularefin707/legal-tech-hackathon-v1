@@ -11,8 +11,12 @@ import {
   Calendar,
   ArrowRight,
   ShieldCheck,
+  ShieldAlert,
   AlertCircle,
   TrendingUp,
+  Play,
+  CheckCircle2,
+  Lock,
 } from 'lucide-react';
 import { useLegalAid } from '../context/LegalAidContext';
 
@@ -21,10 +25,13 @@ export const DashboardView: React.FC = () => {
     cases,
     lawyers,
     auditLogs,
+    vulnerabilities,
+    securityIncidents,
     setSelectedCaseId,
     setActiveView,
     atRiskDeadlinesCount,
     stuckCases,
+    runSecuritySimulation,
   } = useLegalAid();
 
   // Metrics
@@ -131,6 +138,94 @@ export const DashboardView: React.FC = () => {
           </div>
           <div className="text-xl font-bold text-amber-950 mt-1">{pendingLawyerAssignmentCount}</div>
           <div className="text-[10px] text-amber-800 mt-0.5">নিয়োগ প্রক্রিয়াধীন</div>
+        </div>
+      </div>
+
+      {/* Demo Security-Control Maturity Score & Posture Banner */}
+      <div className="bg-white border border-gray-300 rounded p-4 shadow-xs">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-gray-200 pb-3">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-8 h-8 rounded bg-blue-900 text-white flex items-center justify-center font-bold text-sm shrink-0">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <h3 className="font-bold text-sm text-gray-900">
+                  নিরাপত্তা নিয়ন্ত্রণ পরিপক্বতা স্কোর (Demo Security-Control Maturity Score)
+                </h3>
+                <span className="bg-blue-100 text-blue-900 text-[10px] font-bold px-2 py-0.5 rounded">
+                  ৮২ / ১০০ • ভালো মান
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">
+                কাল্পনিক হ্যাকাথন অডিট ও বিএসটিআই/আইসিটি সাইবার গাইডলাইন ভিত্তিক নিয়ন্ত্রণ পর্যবেক্ষণ
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2 shrink-0">
+            <button
+              onClick={runSecuritySimulation}
+              className="px-3 py-1.5 bg-red-700 hover:bg-red-800 text-white rounded text-xs font-bold flex items-center space-x-1.5 cursor-pointer shadow-xs transition-colors"
+            >
+              <Play className="w-3 h-3 fill-current" />
+              <span>নিরাপত্তা মহড়া চালান</span>
+            </button>
+            <button
+              onClick={() => setActiveView('vulnerabilities')}
+              className="px-3 py-1.5 bg-gray-800 hover:bg-gray-900 text-white rounded text-xs font-bold flex items-center space-x-1 cursor-pointer transition-colors"
+            >
+              <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+              <span>ভালনারেবিলিটি রেজিস্টার ({vulnerabilities.filter(v => v.severity === 'CRITICAL').length}টি ক্রিটিক্যাল)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 4 Control Metric Progress Bars */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3 pt-1">
+          <div className="bg-gray-50 p-2.5 rounded border border-gray-200">
+            <div className="flex justify-between items-center text-xs mb-1">
+              <span className="font-semibold text-gray-700">ভূমিকা ও এক্সেস নিয়ন্ত্রণ (RBAC/BOLA)</span>
+              <span className="font-bold text-emerald-700">৯২%</span>
+            </div>
+            <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
+              <div className="bg-emerald-600 h-full" style={{ width: '92%' }}></div>
+            </div>
+            <div className="text-[10px] text-gray-500 mt-1">অবজেক্ট-লেভেল কঠোর যাচাই সক্রিয়</div>
+          </div>
+
+          <div className="bg-gray-50 p-2.5 rounded border border-gray-200">
+            <div className="flex justify-between items-center text-xs mb-1">
+              <span className="font-semibold text-gray-700">অপরিবর্তনীয় অডিট ট্রেইল</span>
+              <span className="font-bold text-blue-800">৯০%</span>
+            </div>
+            <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
+              <div className="bg-blue-700 h-full" style={{ width: '90%' }}></div>
+            </div>
+            <div className="text-[10px] text-gray-500 mt-1">কোরিলেশন আইডি ও ক্রিপ্টো হ্যাশ</div>
+          </div>
+
+          <div className="bg-gray-50 p-2.5 rounded border border-gray-200">
+            <div className="flex justify-between items-center text-xs mb-1">
+              <span className="font-semibold text-gray-700">সংবেদনশীল নথি সুরক্ষা (DLP)</span>
+              <span className="font-bold text-blue-800">৮৫%</span>
+            </div>
+            <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
+              <div className="bg-blue-600 h-full" style={{ width: '85%' }}></div>
+            </div>
+            <div className="text-[10px] text-gray-500 mt-1">ডিজিটাল ওয়াটারমার্ক ও সুরক্ষিত ভল্ট</div>
+          </div>
+
+          <div className="bg-gray-50 p-2.5 rounded border border-gray-200">
+            <div className="flex justify-between items-center text-xs mb-1">
+              <span className="font-semibold text-gray-700">ভালনারেবিলিটি ব্যবস্থাপনা ও SLA</span>
+              <span className="font-bold text-amber-700">৭২%</span>
+            </div>
+            <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
+              <div className="bg-amber-500 h-full" style={{ width: '72%' }}></div>
+            </div>
+            <div className="text-[10px] text-amber-700 font-semibold mt-1">১টি ক্রিটিক্যাল ত্রুটি প্যাচাধীন</div>
+          </div>
         </div>
       </div>
 

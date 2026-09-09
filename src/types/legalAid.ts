@@ -200,20 +200,44 @@ export interface LegalAidCase {
   disposalReason?: string;
 }
 
+export type AuditEventType =
+  | 'CASE_CREATED'
+  | 'CASE_UPDATED'
+  | 'DOCUMENT_VIEWED'
+  | 'DOCUMENT_DOWNLOAD_BLOCKED'
+  | 'LAWYER_ASSIGNED'
+  | 'PRIORITY_CHANGED'
+  | 'ACCESS_DENIED'
+  | 'TOKEN_VALIDATION_FAILED'
+  | 'SECURITY_INCIDENT_CREATED'
+  | 'VULNERABILITY_REMEDIATED'
+  | 'OTHER';
+
 export interface AuditLogEntry {
   id: string;
   timestamp: string;
   user: string;
   role: string;
   action: string;
+  eventType?: AuditEventType;
   resourceType: 'মামলা' | 'আইনজীবী' | 'আবেদনকারী' | 'নথি' | 'প্রতিবেদন' | 'নিরাপত্তা' | 'অনুমতি';
   resourceId: string;
   previousState?: string;
   nextState?: string;
   outcome: 'সফল' | 'প্রত্যাখ্যাত' | 'ব্লক করা হয়েছে';
+  reason?: string;
+  correlationId?: string;
   ipAddress: string;
   districtScope: string;
   details: string;
+  evidenceData?: {
+    rawEndpoint?: string;
+    requestMethod?: string;
+    failureReason?: string;
+    policyViolated?: string;
+    targetResourceHash?: string;
+    mitigationAction?: string;
+  };
 }
 
 export interface SecurityEvent {
@@ -227,6 +251,78 @@ export interface SecurityEvent {
   resourceId?: string;
   blocked: boolean;
   actionTaken: string;
+  correlationId?: string;
+}
+
+export type VulnerabilitySeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+export type VulnerabilityStatus = 'OPEN' | 'UNDER_REVIEW' | 'MITIGATING' | 'CONTAINED' | 'RESOLVED';
+
+export type LifecycleStageKey =
+  | 'DETECT'
+  | 'CLASSIFY'
+  | 'CONTAIN'
+  | 'INVESTIGATE'
+  | 'REMEDIATE'
+  | 'VERIFY'
+  | 'AUDIT';
+
+export interface VulnerabilityLifecycleStage {
+  stage: LifecycleStageKey;
+  stageNameBn: string;
+  stageNameEn: string;
+  timestamp: string;
+  responsibleRole: string;
+  actionTaken: string;
+  status: 'COMPLETED' | 'IN_PROGRESS' | 'PENDING';
+  evidenceRef: string;
+}
+
+export interface VulnerabilityItem {
+  id: string;
+  titleBn: string;
+  titleEn: string;
+  severity: VulnerabilitySeverity;
+  asset: string;
+  status: VulnerabilityStatus;
+  owner: string;
+  slaHours: number;
+  slaRemainingHours: number;
+  isSlaAtRisk?: boolean;
+  description: string;
+  identifiedAt: string;
+  remediationPlan: string;
+  lifecycle: VulnerabilityLifecycleStage[];
+  relatedIncidentId?: string;
+}
+
+export interface SecurityIncident {
+  id: string;
+  incidentNumber: string;
+  titleBn: string;
+  titleEn: string;
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  status: 'OPEN' | 'INVESTIGATING' | 'CONTAINED' | 'REMEDIATED' | 'CLOSED';
+  detectedAt: string;
+  resourceId: string;
+  resourceType: string;
+  resourceTitle: string;
+  actor: string;
+  detectionReason: string;
+  threatSummary: string;
+  whyFlagged: string;
+  whatWasBlocked: string;
+  evidencePreserved: string;
+  controlsTriggered: string[];
+  remediationOccurred: string;
+  correlationId: string;
+  controlResponse: {
+    tokenValidation: 'FAILED' | 'PASSED';
+    rbacCheck: 'DENIED' | 'ALLOWED';
+    requestAction: 'BLOCKED' | 'PERMITTED';
+    sessionAction: 'QUARANTINED' | 'ACTIVE';
+    auditEvent: 'RECORDED' | 'SKIPPED';
+    incidentStatus: 'CREATED' | 'UPDATED';
+  };
 }
 
 export interface DataExportRequest {

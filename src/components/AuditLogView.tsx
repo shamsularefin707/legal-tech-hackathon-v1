@@ -9,14 +9,17 @@ import {
   Search,
   Filter,
   ShieldCheck,
+  ShieldAlert,
   CheckCircle,
   AlertOctagon,
   Download,
+  Eye,
+  ExternalLink,
 } from 'lucide-react';
 import { useLegalAid } from '../context/LegalAidContext';
 
 export const AuditLogView: React.FC = () => {
-  const { auditLogs } = useLegalAid();
+  const { auditLogs, viewSecurityIncident } = useLegalAid();
   const [searchQuery, setSearchQuery] = useState('');
   const [outcomeFilter, setOutcomeFilter] = useState('ALL');
   const [resourceFilter, setResourceFilter] = useState('ALL');
@@ -108,11 +111,11 @@ export const AuditLogView: React.FC = () => {
                 <th className="py-2.5 px-3 whitespace-nowrap">তারিখ ও সময়</th>
                 <th className="py-2.5 px-3 whitespace-nowrap">ব্যবহারকারী ও পদবি</th>
                 <th className="py-2.5 px-3 whitespace-nowrap">কার্যক্রম</th>
-                <th className="py-2.5 px-3 whitespace-nowrap">সম্পদ ও নম্বর</th>
+                <th className="py-2.5 px-3 whitespace-nowrap">সম্পদ ও কোরিলেশন</th>
                 <th className="py-2.5 px-3 whitespace-nowrap">পূর্ববর্তী অবস্থা</th>
                 <th className="py-2.5 px-3 whitespace-nowrap">পরবর্তী অবস্থা</th>
                 <th className="py-2.5 px-3 whitespace-nowrap">ফলাফল</th>
-                <th className="py-2.5 px-3 whitespace-nowrap">আইপি ও নেটওয়ার্ক</th>
+                <th className="py-2.5 px-3 whitespace-nowrap">আইপি ও প্রমাণপত্র</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -133,11 +136,23 @@ export const AuditLogView: React.FC = () => {
                     <div className="text-[10px] text-gray-500">{log.role}</div>
                   </td>
                   <td className="py-2.5 px-3 font-medium text-gray-800">
-                    {log.action}
+                    <div>{log.action}</div>
+                    {log.details && (
+                      <div className="text-[10px] text-gray-500 mt-0.5 line-clamp-1 max-w-xs">
+                        {log.details}
+                      </div>
+                    )}
                   </td>
-                  <td className="py-2.5 px-3 text-gray-700 font-mono">
-                    <span className="font-semibold text-blue-950">{log.resourceType}: </span>
-                    <span>{log.resourceId}</span>
+                  <td className="py-2.5 px-3 text-gray-700">
+                    <div className="font-mono">
+                      <span className="font-semibold text-blue-950">{log.resourceType}: </span>
+                      <span>{log.resourceId}</span>
+                    </div>
+                    {log.correlationId && (
+                      <div className="text-[10px] font-mono text-blue-700 font-bold mt-0.5">
+                        আইডি: {log.correlationId}
+                      </div>
+                    )}
                   </td>
                   <td className="py-2.5 px-3 text-gray-500">
                     {log.previousState || '-'}
@@ -158,8 +173,19 @@ export const AuditLogView: React.FC = () => {
                       {log.outcome}
                     </span>
                   </td>
-                  <td className="py-2.5 px-3 text-gray-500 font-mono text-[11px] whitespace-nowrap">
-                    {log.ipAddress}
+                  <td className="py-2.5 px-3 whitespace-nowrap">
+                    <div className="text-gray-500 font-mono text-[11px]">
+                      {log.ipAddress}
+                    </div>
+                    {log.resourceId.includes('INC-') && (
+                      <button
+                        onClick={() => viewSecurityIncident('inc-42')}
+                        className="mt-1 px-2 py-0.5 bg-red-100 hover:bg-red-200 text-red-900 rounded text-[10px] font-bold flex items-center space-x-1 cursor-pointer transition-colors"
+                      >
+                        <ShieldAlert className="w-3 h-3 text-red-700" />
+                        <span>ইনসিডেন্ট ডসিয়ার</span>
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

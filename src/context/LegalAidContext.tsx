@@ -13,6 +13,9 @@ import {
   PriorityLevel,
   CaseStatus,
   CaseDocument,
+  VulnerabilityItem,
+  SecurityIncident,
+  LifecycleStageKey,
 } from '../types/legalAid';
 import {
   INITIAL_USERS,
@@ -20,6 +23,8 @@ import {
   INITIAL_CASES,
   INITIAL_AUDIT_LOGS,
   INITIAL_SECURITY_EVENTS,
+  INITIAL_VULNERABILITIES,
+  INITIAL_SECURITY_INCIDENTS,
 } from '../data/initialData';
 
 export interface NotificationItem {
@@ -31,6 +36,23 @@ export interface NotificationItem {
   linkCaseId?: string;
 }
 
+export interface SimulationStepLog {
+  step: number;
+  titleBn: string;
+  titleEn: string;
+  detail: string;
+  status: 'DONE' | 'RUNNING' | 'PENDING';
+  timestamp?: string;
+}
+
+export interface SimulationState {
+  isRunning: boolean;
+  currentStep: number;
+  isCompleted: boolean;
+  logs: SimulationStepLog[];
+  correlationId?: string;
+}
+
 interface LegalAidContextType {
   currentUser: User;
   setCurrentUser: (user: User) => void;
@@ -39,16 +61,35 @@ interface LegalAidContextType {
   lawyers: PanelLawyer[];
   auditLogs: AuditLogEntry[];
   securityEvents: SecurityEvent[];
+  vulnerabilities: VulnerabilityItem[];
+  securityIncidents: SecurityIncident[];
   notifications: NotificationItem[];
   selectedCaseId: string | null;
   setSelectedCaseId: (id: string | null) => void;
+  selectedVulnerabilityId: string | null;
+  setSelectedVulnerabilityId: (id: string | null) => void;
+  selectedIncidentId: string | null;
+  setSelectedIncidentId: (id: string | null) => void;
   activeView: string;
   setActiveView: (view: string) => void;
+  
+  // Modals & Inspection
+  isIncidentModalOpen: boolean;
+  setIsIncidentModalOpen: (open: boolean) => void;
+  isNikahnamaPreviewOpen: boolean;
+  setIsNikahnamaPreviewOpen: (open: boolean) => void;
+  isSimulationModalOpen: boolean;
+  setIsSimulationModalOpen: (open: boolean) => void;
+  simulationState: SimulationState;
   
   // Security & Object-Level Authorization
   checkObjectAccess: (caseRecord: LegalAidCase) => { allowed: boolean; reason?: string };
   triggerUnauthorizedCaseAccessDemo: () => void;
   triggerBulkDownloadAbuseDemo: () => void;
+  runSecuritySimulation: () => void;
+  viewSecurityIncident: (incidentId: string) => void;
+  openNikahnamaPreview: () => void;
+  updateVulnerabilityStage: (vulnId: string, stageKey: LifecycleStageKey, status: 'COMPLETED' | 'IN_PROGRESS' | 'PENDING') => void;
   
   // Justice Operations Actions
   assignLawyerToCase: (caseId: string, lawyerId: string, overrideReason?: string) => { success: boolean; message: string };
@@ -72,8 +113,24 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [lawyers, setLawyers] = useState<PanelLawyer[]>(INITIAL_PANEL_LAWYERS);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(INITIAL_AUDIT_LOGS);
   const [securityEvents, setSecurityEvents] = useState<SecurityEvent[]>(INITIAL_SECURITY_EVENTS);
+  const [vulnerabilities, setVulnerabilities] = useState<VulnerabilityItem[]>(INITIAL_VULNERABILITIES);
+  const [securityIncidents, setSecurityIncidents] = useState<SecurityIncident[]>(INITIAL_SECURITY_INCIDENTS);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>('case-1284');
+  const [selectedVulnerabilityId, setSelectedVulnerabilityId] = useState<string | null>('vuln-bac-01');
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>('inc-42');
   const [activeView, setActiveView] = useState<string>('dashboard');
+
+  // Modals state
+  const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
+  const [isNikahnamaPreviewOpen, setIsNikahnamaPreviewOpen] = useState(false);
+  const [isSimulationModalOpen, setIsSimulationModalOpen] = useState(false);
+
+  const [simulationState, setSimulationState] = useState<SimulationState>({
+    isRunning: false,
+    currentStep: 0,
+    isCompleted: false,
+    logs: [],
+  });
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([
     {
@@ -215,12 +272,22 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       user: currentUser.name,
       role: currentUser.designation,
       action: 'সংবেদনশীল নথি গণডাউনলোড অপচেষ্টা শনাক্ত',
+      eventType: 'DOCUMENT_DOWNLOAD_BLOCKED',
       resourceType: 'নথি',
       resourceId: `${targetCase.caseNumber} - সকল নথি`,
       outcome: 'ব্লক করা হয়েছে',
+      reason: 'অস্বাভাবিক ডাউনলোডের ফ্রিকোয়েন্সি (Anti-Scraping / WAF Rate Limit)',
+      correlationId: 'SEC-TRC-99342',
       ipAddress: '192.168.10.74',
       districtScope: currentUser.district,
       details: desc,
+      evidenceData: {
+        rawEndpoint: 'POST /api/v1/cases/export/batch-documents',
+        requestMethod: 'POST',
+        failureReason: 'RATE_LIMIT_EXCEEDED',
+        policyViolated: 'SEC-DLP-BULK-01: ৩০ সেকেন্ডে সর্বোচ্চ ২টি নথি ডাউনলোড অনুমোদিত',
+        mitigationAction: 'আইপি থ্রোটল ও ইউজার সেশন সাময়িক স্থগিত',
+      },
     });
 
     logSecurity({
@@ -232,6 +299,7 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       resourceId: targetCase.caseNumber,
       blocked: true,
       actionTaken: 'অতিরিক্ত অনুরোধ ব্লক করা হয়েছে; ব্যবহারকারীর অধিবেশন (Session) নজরদারিতে রাখা হয়েছে।',
+      correlationId: 'SEC-TRC-99342',
     });
 
     setNotifications((prev) => [
@@ -244,6 +312,180 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       },
       ...prev,
     ]);
+  };
+
+  // Interactive 10-step End-to-End Security Simulation Engine
+  const runSecuritySimulation = () => {
+    setIsSimulationModalOpen(true);
+    const correlationId = `SEC-SIM-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const stepsTemplate: SimulationStepLog[] = [
+      {
+        step: 1,
+        titleBn: '১. অননুমোদিত নথি এক্সেস অনুরোধ প্রেরণ',
+        titleEn: 'Unauthorized Document Access Request',
+        detail: 'বহিরাগত আইপি ২০৩.১১২.৫৫.১৯ থেকে কেস LA-2026-001284-এর সংবেদনশীল নথি doc-4 (নিকাহনামা) সরাসরি ডাউনলোডের রিকোয়েস্ট আসে।',
+        status: 'RUNNING',
+      },
+      {
+        step: 2,
+        titleBn: '২. টোকেন যাচাইকরণ ব্যর্থ (Token Validation Failed)',
+        titleEn: 'Token Signature Validation Check',
+        detail: 'রিকোয়েস্ট হেডারে কোনো বৈধ ক্রিপ্টোগ্রাফিক বিয়ারার টোকেন বা সেশন সিগনেচার পাওয়া যায়নি। RFC 7519 ভ্যালিডেশন ফেইল্ড।',
+        status: 'PENDING',
+      },
+      {
+        step: 3,
+        titleBn: '৩. ভূমিকাভিত্তিক এক্সেস ও BOLA ফিল্টারে অনুমোদন প্রত্যাখ্যান',
+        titleEn: 'RBAC / BOLA Authorization Denied',
+        detail: 'রিকোয়েস্টকারী আবেদনকারী, নিয়োগকৃত আইনজীবী বা জেলা কর্মকর্তা না হওয়ায় অবজেক্ট-লেভেল এক্সেস কঠোরভাবে ডিনায়েড।',
+        status: 'PENDING',
+      },
+      {
+        step: 4,
+        titleBn: '৪. অনুরোধ তাৎক্ষণিকভাবে প্রতিহত (HTTP 403 Forbidden)',
+        titleEn: 'Traffic Drop / Block Action',
+        detail: 'ডকুমেন্ট রিপোজিটরি গেটওয়ে কোনো বাইনারি ফাইল ডেটা স্ট্রিম না করে সংযোগ তাত্ক্ষণিক বন্ধ করে দেয়।',
+        status: 'PENDING',
+      },
+      {
+        step: 5,
+        titleBn: '৫. সিকিউরিটি ইনসিডেন্ট রেজিস্ট্রি প্রস্তুত (INC-2026-0042)',
+        titleEn: 'Security Incident Created in Registry',
+        detail: 'নিরাপত্তা সাব-সিস্টেমে অটোমেটিক ক্রিটিক্যাল ইনসিডেন্ট টিকেট নিবন্ধিত হয়।',
+        status: 'PENDING',
+      },
+      {
+        step: 6,
+        titleBn: '৬. ঝুঁকি স্তর শ্রেণিবিভাগ ও অগ্রাধিকার নিরূপণ',
+        titleEn: 'Risk Classification (CRITICAL - CVSS 9.1)',
+        detail: 'সংবেদনশীল পারিবারিক মামলার গোপনীয় আইনি নথি হওয়ায় তাৎক্ষণিক সর্বোচ্চ সংবেদনশীলতা নির্ধারিত হয়।',
+        status: 'PENDING',
+      },
+      {
+        step: 7,
+        titleBn: '৭. অপরিবর্তনীয় অডিট ট্রেইলে প্রমাণ সংরক্ষণ',
+        titleEn: 'Immutable Audit Trail Ledger Entry',
+        detail: `প্যাকেট হেডার হ্যাশ ও আইপি সহ রেকর্ড লেজারে সংরক্ষিত। ট্র্যাকিং আইডি: ${correlationId}`,
+        status: 'PENDING',
+      },
+      {
+        step: 8,
+        titleBn: '৮. প্রশাসনিক ড্যাশবোর্ডে উচ্চ-ঝুঁকি সতর্কবার্তা জারি',
+        titleEn: 'Administrator Notification Dispatched',
+        detail: 'জেলা লিগ্যাল এইড কর্মকর্তা ও জাতীয় নিরাপত্তা প্রশাসকের ডেস্কে পুশ অ্যালার্ট ও ইভেন্ট নোটিফিকেশন জারি।',
+        status: 'PENDING',
+      },
+      {
+        step: 9,
+        titleBn: '৯. স্বয়ংক্রিয় প্রতিরোধ ও কোয়ারেন্টিন (Containment)',
+        titleEn: 'Automated Containment & Quarantine',
+        detail: 'সংশ্লিষ্ট আইপি ঠিকানা নিরাপত্তা ব্লকলিস্টে প্রেরণ এবং ওয়ান-টাইম ইউআরএল মেয়াদ ১ মিনিটে সীমিত।',
+        status: 'PENDING',
+      },
+      {
+        step: 10,
+        titleBn: '১০. যাচাইকরণ পরীক্ষা সফল ও অখণ্ডতা সিলমোহর',
+        titleEn: 'Verification & Integrity Seal Complete',
+        detail: 'নথির নিরাপত্তা হ্যাশ অক্ষত রয়েছে। কোনো ডেটা লিক সংঘটিত হয়নি। ঘটনাটি নিয়ন্ত্রিত (CONTAINED)।',
+        status: 'PENDING',
+      },
+    ];
+
+    setSimulationState({
+      isRunning: true,
+      currentStep: 1,
+      isCompleted: false,
+      logs: stepsTemplate,
+      correlationId,
+    });
+
+    let currentIdx = 0;
+    const interval = setInterval(() => {
+      currentIdx++;
+      if (currentIdx < stepsTemplate.length) {
+        setSimulationState((prev) => {
+          const updatedLogs = prev.logs.map((log, idx) => {
+            if (idx < currentIdx) return { ...log, status: 'DONE' as const };
+            if (idx === currentIdx) return { ...log, status: 'RUNNING' as const };
+            return { ...log, status: 'PENDING' as const };
+          });
+          return {
+            ...prev,
+            currentStep: currentIdx + 1,
+            logs: updatedLogs,
+          };
+        });
+      } else {
+        clearInterval(interval);
+        setSimulationState((prev) => ({
+          ...prev,
+          currentStep: 10,
+          isCompleted: true,
+          isRunning: false,
+          logs: prev.logs.map((l) => ({ ...l, status: 'DONE' as const })),
+        }));
+
+        // Append real log entry
+        logAudit({
+          user: 'নিরাপত্তা মহড়া ইঞ্জিন (SecSim v2.4)',
+          role: 'স্বয়ংক্রিয় নিরাপত্তা সিমুলেটর',
+          action: 'লাইভ নিরাপত্তা প্রতিরোধ মহড়া পরিচালনা',
+          eventType: 'SECURITY_INCIDENT_CREATED',
+          resourceType: 'নিরাপত্তা',
+          resourceId: 'INC-2026-0042',
+          outcome: 'ব্লক করা হয়েছে',
+          reason: 'অননুমোদিত সরাসরি নথি ডাউনলোডের চেষ্টা প্রতিহত ও নিয়ন্ত্রিত (CONTAINED)।',
+          correlationId,
+          ipAddress: '203.112.55.19',
+          districtScope: 'জাতীয় পর্যবেক্ষণ',
+          details: '১০-ধাপ বিশিষ্ট অ্যান্ড-টু-অ্যান্ড ইনসিডেন্ট রেসপন্স মহড়া সফলভাবে সম্পন্ন হয়েছে। সকল নিয়ন্ত্রণ অক্ষত।',
+          evidenceData: {
+            rawEndpoint: 'GET /api/v1/cases/LA-2026-001284/documents/doc-4/download',
+            requestMethod: 'GET',
+            failureReason: 'TOKEN_VALIDATION_FAILED',
+            policyViolated: 'SEC-BOLA-01: অবজেক্ট-লেভেল এক্সেস অনুমোদন নেই',
+            targetResourceHash: 'sha256:4f8a9e23c7b165...9d21e8',
+            mitigationAction: 'আইপি কোয়ারেন্টিন ও ইনসিডেন্ট ট্র্যাকিং সক্রিয়',
+          },
+        });
+
+        // Push alert notification
+        setNotifications((prev) => [
+          {
+            id: `notif-${Date.now()}`,
+            title: `মহড়া সফল: অননুমোদিত নথি এক্সেস প্রতিহত ও অডিট লগে সংরক্ষিত (আইডি: ${correlationId})।`,
+            time: 'এখনই',
+            type: 'URGENT',
+            read: false,
+          },
+          ...prev,
+        ]);
+      }
+    }, 450);
+  };
+
+  const viewSecurityIncident = (incidentId: string) => {
+    setSelectedIncidentId(incidentId);
+    setIsIncidentModalOpen(true);
+  };
+
+  const openNikahnamaPreview = () => {
+    setIsNikahnamaPreviewOpen(true);
+  };
+
+  const updateVulnerabilityStage = (vulnId: string, stageKey: LifecycleStageKey, status: 'COMPLETED' | 'IN_PROGRESS' | 'PENDING') => {
+    setVulnerabilities((prev) =>
+      prev.map((v) => {
+        if (v.id === vulnId) {
+          const updatedLifecycle = v.lifecycle.map((stg) =>
+            stg.stage === stageKey ? { ...stg, status } : stg
+          );
+          return { ...v, lifecycle: updatedLifecycle };
+        }
+        return v;
+      })
+    );
   };
 
   // Justice Operations: Assign Lawyer Workflow
@@ -660,14 +902,31 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         lawyers,
         auditLogs,
         securityEvents,
+        vulnerabilities,
+        securityIncidents,
         notifications,
         selectedCaseId,
         setSelectedCaseId,
+        selectedVulnerabilityId,
+        setSelectedVulnerabilityId,
+        selectedIncidentId,
+        setSelectedIncidentId,
         activeView,
         setActiveView,
+        isIncidentModalOpen,
+        setIsIncidentModalOpen,
+        isNikahnamaPreviewOpen,
+        setIsNikahnamaPreviewOpen,
+        isSimulationModalOpen,
+        setIsSimulationModalOpen,
+        simulationState,
         checkObjectAccess,
         triggerUnauthorizedCaseAccessDemo,
         triggerBulkDownloadAbuseDemo,
+        runSecuritySimulation,
+        viewSecurityIncident,
+        openNikahnamaPreview,
+        updateVulnerabilityStage,
         assignLawyerToCase,
         overrideCasePriority,
         updateCaseStatus,

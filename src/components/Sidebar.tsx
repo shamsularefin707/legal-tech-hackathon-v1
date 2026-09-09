@@ -10,6 +10,7 @@ import {
   Calendar,
   Clock,
   ShieldCheck,
+  ShieldAlert,
   FileText,
   History,
   Users,
@@ -70,6 +71,13 @@ export const Sidebar: React.FC = () => {
     },
     { id: 'hearings', label: 'শুনানি ও মধ্যস্থতা', icon: Calendar },
     { id: 'reports', label: 'সরকারি প্রতিবেদন ও পরিসংখ্যান', icon: FileSpreadsheet },
+    {
+      id: 'vulnerabilities',
+      label: 'ভালনারেবিলিটি ম্যানেজমেন্ট',
+      icon: ShieldAlert,
+      badge: '১ ক্রিটিক্যাল',
+      badgeColor: 'red',
+    },
     { id: 'security', label: 'নিরাপত্তা ও এক্সেস নিয়ন্ত্রণ', icon: ShieldCheck },
     { id: 'audit-log', label: 'কার্যক্রমের রেকর্ড (অডিট ট্রেইল)', icon: History },
     { id: 'users', label: 'ব্যবহারকারী ও পদবি', icon: Users },
@@ -146,14 +154,14 @@ export const Sidebar: React.FC = () => {
       {/* System Status Footer */}
       <div className="p-3 border-t border-gray-200 bg-gray-50 text-[11px] text-gray-600">
         <div className="flex items-center justify-between font-medium">
-          <span>নিরাপত্তা নীতি:</span>
-          <span className="text-emerald-700 font-bold flex items-center">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block mr-1"></span>
-            সক্রিয় ও সুরক্ষিত
+          <span>পরিবেশ:</span>
+          <span className="text-blue-700 font-bold flex items-center">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block mr-1"></span>
+            ডেমো প্রোটোটাইপ
           </span>
         </div>
-        <div className="text-[10px] text-gray-400 mt-1">
-          লগইন সেশন আইডি: BD-LA-90214
+        <div className="text-[10px] text-gray-500 mt-1">
+          কাল্পনিক ডেটা • হ্যাকাথন প্রদর্শনী
         </div>
       </div>
     </aside>
