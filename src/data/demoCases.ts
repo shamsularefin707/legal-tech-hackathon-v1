@@ -127,21 +127,23 @@ export function generateSyntheticCases(
   // Shuffle category pool deterministically
   const shuffledCategories = rng.sample(categoryPool, categoryPool.length);
 
-  // Status Distribution Targets:
-  // DISPOSED: 65
-  // LAWYER_PENDING / REGISTERED: 25
-  // HEARING_SCHEDULED: 80
-  // ONGOING / IN_PROGRESS: 270
-  // AWAITING_RESOLUTION: 35
-  // OVERDUE / ESCALATED: 25
-  // Sum = 65 + 25 + 80 + 270 + 35 + 25 = 500
+  // Canonical Status Distribution Targets (Mutually Exclusive Primary Status, Sum = 500):
+  // SUBMITTED: 15
+  // UNDER_REVIEW: 20
+  // REGISTERED: 25
+  // ONGOING: 320
+  // AWAITING_RESOLUTION: 45
+  // RESOLVED: 55
+  // CLOSED: 20
+  // Sum = 15 + 20 + 25 + 320 + 45 + 55 + 20 = 500
   const statusPool: CaseStatus[] = [];
-  for (let i = 0; i < 65; i++) statusPool.push('DISPOSED');
-  for (let i = 0; i < 25; i++) statusPool.push('LAWYER_PENDING');
-  for (let i = 0; i < 80; i++) statusPool.push('HEARING_SCHEDULED');
-  for (let i = 0; i < 270; i++) statusPool.push('ONGOING');
-  for (let i = 0; i < 35; i++) statusPool.push('AWAITING_RESOLUTION');
-  for (let i = 0; i < 25; i++) statusPool.push('OVERDUE');
+  for (let i = 0; i < 15; i++) statusPool.push('SUBMITTED');
+  for (let i = 0; i < 20; i++) statusPool.push('UNDER_REVIEW');
+  for (let i = 0; i < 25; i++) statusPool.push('REGISTERED');
+  for (let i = 0; i < 320; i++) statusPool.push('ONGOING');
+  for (let i = 0; i < 45; i++) statusPool.push('AWAITING_RESOLUTION');
+  for (let i = 0; i < 55; i++) statusPool.push('RESOLVED');
+  for (let i = 0; i < 20; i++) statusPool.push('CLOSED');
 
   const shuffledStatuses = rng.sample(statusPool, statusPool.length);
 
@@ -207,13 +209,19 @@ export function generateSyntheticCases(
     const recOffset = rng.nextInt(0, 3);
     const lawyerRecommendationDate = addDays(eligibilityDecisionDate, recOffset);
 
+    // Separation of Duties & IDs:
+    const appId = `APP-2026-${String(globalIndex).padStart(4, '0')}`;
+    const isRegisteredOrLater = status !== 'SUBMITTED' && status !== 'DRAFT';
+    const officialCaseId = isRegisteredOrLater ? caseNumber : undefined;
+    const isDisposed = status === 'RESOLVED' || status === 'CLOSED';
+
     // Lawyer assignment:
     let lawyerAssignmentDate: string | undefined = undefined;
     let assignedLawyer: PanelLawyer | undefined = undefined;
 
     const districtLawyers = lawyersByDistrict[distInfo.districtBn] || [];
 
-    if (status !== 'SUBMITTED' && status !== 'ELIGIBILITY_REVIEW' && status !== 'LAWYER_PENDING') {
+    if (status !== 'SUBMITTED' && status !== 'UNDER_REVIEW' && status !== 'REGISTERED') {
       const assignOffset = rng.nextInt(1, 4);
       lawyerAssignmentDate = addDays(lawyerRecommendationDate, assignOffset);
 
@@ -235,11 +243,12 @@ export function generateSyntheticCases(
 
     if (
       lawyerAssignmentDate &&
-      status !== 'LAWYER_PENDING' &&
+      status !== 'SUBMITTED' &&
+      status !== 'UNDER_REVIEW' &&
       status !== 'REGISTERED'
     ) {
       // Create 1 to 3 hearings
-      const hearingCount = status === 'DISPOSED' ? rng.nextInt(2, 4) : rng.nextInt(1, 3);
+      const hearingCount = isDisposed ? rng.nextInt(2, 4) : rng.nextInt(1, 3);
       let currentHearingDate = addDays(lawyerAssignmentDate, rng.nextInt(5, 20));
 
       for (let hIdx = 0; hIdx < hearingCount; hIdx++) {
@@ -252,7 +261,7 @@ export function generateSyntheticCases(
         if (
           todaysHearingsCreated < targetTodaysHearings &&
           hIdx === hearingCount - 1 &&
-          status !== 'DISPOSED' &&
+          !isDisposed &&
           rng.next() < 0.35
         ) {
           hearingIso = DEMO_SNAPSHOT_DATE;
@@ -263,23 +272,29 @@ export function generateSyntheticCases(
 
         hearings.push({
           id: `HR-${id}-${hIdx + 1}`,
+          hearingId: `HR-${id}-${hIdx + 1}`,
           caseId: id,
           caseNumber,
+          court: `${distInfo.districtBn} ${courtName}`,
+          courtName: `${distInfo.districtBn} ${courtName}`,
+          benchCourtNumber: benchNumber,
+          district: distInfo.districtBn,
+          hearingDate: hearingIso,
+          hearingTime: `${rng.nextInt(10, 12)}:${rng.pick(['০০', '১৫', '৩০', '৪৫'])} পূর্বাহ্ণ`,
+          presidingOfficer: 'বিজ্ঞ জেলা ও দায়রা জজ',
+          judgeName: 'বিজ্ঞ বিচারক',
           lawyerId: assignedLawyer?.id,
           lawyerName: assignedLawyer?.name,
           date: formatDateBn(hearingIso),
           isoDate: hearingIso,
           time: `${rng.nextInt(10, 12)}:${rng.pick(['০০', '১৫', '৩০', '৪৫'])} পূর্বাহ্ণ`,
-          courtName: `${distInfo.districtBn} ${courtName}`,
-          benchCourtNumber: benchNumber,
-          district: distInfo.districtBn,
-          judgeName: 'বিজ্ঞ বিচারক',
           purpose:
             hIdx === 0
               ? 'প্রাথমিক অভিযোগ ও নথি উপস্থাপন'
               : hIdx === 1
               ? 'সাক্ষ্য গ্রহণ ও জেরা'
               : 'চূড়ান্ত যুক্তিতর্ক ও আদেশ',
+          notes: 'বিজ্ঞ বিচারকের উপস্থিতিতে ধার্যকৃত আইনি কার্যক্রম সম্পন্নকরণ।',
           status: hStatusObj.status,
           statusBn: hStatusObj.statusBn,
           courtOutcomeSummary:
@@ -306,7 +321,7 @@ export function generateSyntheticCases(
     let disposalDate: string | undefined = undefined;
     let disposalReason: string | undefined = undefined;
 
-    if (status === 'DISPOSED') {
+    if (isDisposed) {
       const baseDispDate = latestHearingDate || lawyerAssignmentDate || registrationDate;
       const dispOffset = rng.nextInt(2, 15);
       const computedDispDate = addDays(baseDispDate, dispOffset);
@@ -523,6 +538,11 @@ export function generateSyntheticCases(
 
     const legalCase: LegalAidCase = {
       id,
+      applicationId: appId,
+      officialCaseId,
+      submittedBy: 'user-staff-1',
+      registeredBy: isRegisteredOrLater ? 'user-admin-1' : undefined,
+      createdBy: 'user-staff-1',
       isDemoData: true,
       caseNumber,
       applicant: partialCase.applicant!,
@@ -533,6 +553,16 @@ export function generateSyntheticCases(
       districtType: 'DIGITAL_LEGAL_AID_PILOT',
       upazila,
       status,
+      deadlineStatus: isDisposed
+        ? 'NORMAL'
+        : sla.slaRemainingDays < 0
+        ? 'EXPIRED'
+        : sla.slaRemainingDays <= 7
+        ? 'AT_RISK'
+        : sla.slaRemainingDays <= 20
+        ? 'APPROACHING'
+        : 'NORMAL',
+      activityStatus: daysWithoutActivity >= 30 && !isDisposed ? 'INACTIVE' : 'ACTIVE',
       filingDate,
       registrationDate,
       eligibilityDecisionDate,

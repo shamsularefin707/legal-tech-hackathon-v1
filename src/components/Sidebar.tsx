@@ -17,8 +17,11 @@ import {
   FileSpreadsheet,
   AlertOctagon,
   Scale,
+  PlusCircle,
+  Shield,
 } from 'lucide-react';
 import { useLegalAid } from '../context/LegalAidContext';
+import { hasPermission } from '../services/rbacService';
 
 export const Sidebar: React.FC = () => {
   const {
@@ -27,6 +30,8 @@ export const Sidebar: React.FC = () => {
     atRiskDeadlinesCount,
     stuckCases,
     cases,
+    currentUser,
+    setIsNewCaseModalOpen,
   } = useLegalAid();
 
   const pendingLawyerCasesCount = cases.filter(
@@ -87,13 +92,33 @@ export const Sidebar: React.FC = () => {
     <aside className="w-64 bg-white border-r border-gray-300 flex flex-col shrink-0 min-h-[calc(100vh-80px)] no-print">
       {/* Office Header */}
       <div className="p-3 border-b border-gray-200 bg-gray-50/70">
-        <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-          কার্যক্রম উইন্ডো
+        <div className="flex items-center justify-between text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+          <span>কার্যক্রম উইন্ডো</span>
+          <span className="text-[10px] text-blue-900 bg-blue-100 px-1.5 py-0.2 rounded font-semibold">
+            {currentUser.district}
+          </span>
         </div>
-        <div className="text-xs font-semibold text-gray-800 mt-0.5">
-          আইনগত সহায়তা ডেস্ক
+        <div className="text-xs font-semibold text-gray-900 mt-0.5 truncate">
+          {currentUser.name}
+        </div>
+        <div className="text-[10px] text-gray-600 truncate font-mono">
+          {currentUser.role}
         </div>
       </div>
+
+      {/* New Application Quick Action for Permitted Roles */}
+      {hasPermission(currentUser, 'CREATE_APPLICATION') && (
+        <div className="p-2 border-b border-gray-200 bg-emerald-50/40">
+          <button
+            id="sidebar-new-case-btn"
+            onClick={() => setIsNewCaseModalOpen(true)}
+            className="w-full flex items-center justify-center space-x-2 px-3 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded font-bold text-xs shadow-xs transition-colors cursor-pointer"
+          >
+            <PlusCircle className="w-3.5 h-3.5 text-emerald-100" />
+            <span>নতুন আবেদন ফরম (৭ ধাপ)</span>
+          </button>
+        </div>
+      )}
 
       {/* Nav List */}
       <nav className="p-2 space-y-0.5 flex-1 overflow-y-auto">

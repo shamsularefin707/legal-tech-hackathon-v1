@@ -5,12 +5,19 @@
  */
 
 export type UserRole =
-  | 'SYSTEM_ADMIN'         // সিস্টেম প্রশাসক
-  | 'NATIONAL_OFFICER'     // জাতীয় পর্যায়ের কর্মকর্তা
-  | 'DISTRICT_OFFICER'     // জেলা আইনগত সহায়তা কর্মকর্তা
-  | 'ASSISTANT_OFFICER'    // সহকারী কর্মকর্তা
-  | 'PANEL_LAWYER'         // প্যানেল আইনজীবী
-  | 'OBSERVER';            // পর্যবেক্ষক
+  // Canonical RBAC Roles
+  | 'NATIONAL_ADMIN'            // জাতীয় প্রশাসক ও সংস্থা প্রধান
+  | 'DISTRICT_LEGAL_AID_ADMIN'  // জেলা লিগ্যাল এইড অফিসার ও আহ্বায়ক
+  | 'LEGAL_AID_STAFF'           // আইনগত সহায়তা সহকারী / স্টাফ
+  | 'PANEL_LAWYER'              // প্যানেল আইনজীবী (LADCS)
+  | 'JUDICIAL_OFFICER'          // বিজ্ঞ বিচারিক কর্মকর্তা (কোর্ট এক্তিয়ার)
+  | 'AUDITOR'                   // স্বাধীন আইন ও নিরীক্ষা কর্মকর্তা
+  // Backward compatibility aliases
+  | 'SYSTEM_ADMIN'              // সিস্টেম প্রশাসক
+  | 'NATIONAL_OFFICER'          // জাতীয় পর্যায়ের কর্মকর্তা
+  | 'DISTRICT_OFFICER'          // জেলা আইনগত সহায়তা কর্মকর্তা
+  | 'ASSISTANT_OFFICER'         // সহকারী কর্মকর্তা
+  | 'OBSERVER';                 // পর্যবেক্ষক
 
 export interface User {
   id: string;
@@ -27,22 +34,26 @@ export interface User {
 }
 
 /**
- * Normalized Internal Case Statuses (Part 6)
+ * Normalized Canonical Case Statuses
  */
 export type CaseStatus =
-  | 'SUBMITTED'               // আবেদন দাখিলকৃত
-  | 'ELIGIBILITY_REVIEW'      // যোগ্যতা যাচাইাধীন
-  | 'REGISTERED'              // নিবন্ধিত
-  | 'LAWYER_PENDING'          // আইনজীবী নিয়োগ অপেক্ষমাণ
-  | 'LAWYER_ASSIGNED'         // আইনজীবী নিয়োগ সম্পন্ন
-  | 'HEARING_SCHEDULED'       // শুনানি নির্ধারিত
+  | 'DRAFT'                   // খসড়া আবেদন
+  | 'SUBMITTED'               // আবেদন দাখিলকৃত (নতুন আবেদন)
+  | 'UNDER_REVIEW'            // পর্যালোচনা ও যাচাইাধীন
+  | 'REGISTERED'              // বিধিসম্মতভাবে নিবন্ধিত
   | 'ONGOING'                 // চলমান বিচারিক কার্যক্রম
-  | 'AWAITING_RESOLUTION'     // নিষ্পত্তির অপেক্ষায়
-  | 'DISPOSED'                // নিষ্পত্তিকৃত
-  | 'CLOSED'                  // সমাপ্ত / সংরক্ষিত
-  | 'OVERDUE'                 // সময়সীমা অতিক্রান্ত
-  | 'ESCALATED'               // উচ্চপর্যায়ে প্রেরিত
-  // Legacy aliases supported for smooth rendering
+  | 'AWAITING_RESOLUTION'     // নিষ্পত্তির অপেক্ষায় (রায়/এডিআর পর্ব)
+  | 'RESOLVED'                // নিষ্পত্তি সম্পন্ন (সফল নিষ্পত্তি)
+  | 'CLOSED'                  // নথি সংরক্ষিত ও সমাপ্ত
+  | 'APPEALED'                // উচ্চ আদালতে আপিলকৃত
+  // Legacy aliases supported for backward compatibility
+  | 'ELIGIBILITY_REVIEW'
+  | 'LAWYER_PENDING'
+  | 'LAWYER_ASSIGNED'
+  | 'HEARING_SCHEDULED'
+  | 'DISPOSED'
+  | 'OVERDUE'
+  | 'ESCALATED'
   | 'NEW_APPLICATION'
   | 'INITIAL_VERIFICATION'
   | 'ELIGIBILITY_CHECK'
@@ -54,6 +65,16 @@ export type CaseStatus =
   | 'MEDIATION_ONGOING'
   | 'STAYED'
   | 'TRANSFERRED';
+
+/**
+ * Separate Deadline Status Dimension
+ */
+export type DeadlineStatus = 'NORMAL' | 'APPROACHING' | 'AT_RISK' | 'EXPIRED';
+
+/**
+ * Separate Activity Status Dimension
+ */
+export type ActivityStatus = 'ACTIVE' | 'INACTIVE';
 
 export type CaseCategory =
   | 'CRIMINAL'          // ফৌজদারি
@@ -152,25 +173,45 @@ export interface TimelineEvent {
 }
 
 /**
- * Normalized Hearing Statuses (Part 7)
+ * Normalized Hearing Statuses (Canonical & Legacy)
  */
-export type HearingStatus = 'COMPLETED' | 'TODAY' | 'UPCOMING' | 'OVERDUE_REVIEW';
+export type HearingStatus =
+  | 'SCHEDULED'           // নির্ধারিত
+  | 'COMPLETED'           // সম্পন্ন
+  | 'ADJOURNED'           // মুলতবি
+  | 'CANCELLED'           // বাতিল
+  | 'RESCHEDULED'         // পুনঃনির্ধারিত
+  // Legacy aliases
+  | 'TODAY'
+  | 'UPCOMING'
+  | 'OVERDUE_REVIEW'
+  | 'নির্ধারিত'
+  | 'অনুষ্ঠিত'
+  | 'মুলতবি'
+  | 'বাতিল';
 
 export interface HearingRecord {
   id: string;
+  hearingId?: string; // Canonical alias for id
   caseId?: string;
   caseNumber?: string;
+  court?: string; // Canonical alias for courtName
+  courtName: string;
+  benchCourtNumber: string;
+  district?: string;
+  hearingDate?: string; // Canonical alias for isoDate (YYYY-MM-DD)
+  hearingTime?: string; // Canonical alias for time
+  hearingType?: string; // e.g. "সাক্ষ্য গ্রহণ", "প্রাথমিক শুনানি", "যুক্তিতর্ক"
+  presidingOfficer?: string; // Canonical alias for judgeName
+  judgeName?: string;
   lawyerId?: string;
   lawyerName?: string;
   date: string; // Bengali display e.g. "০৯ সেপ্টেম্বর ২০২৬"
   isoDate?: string; // Normalized ISO "2026-09-09"
   time: string;
-  courtName: string;
-  benchCourtNumber: string;
-  district?: string;
-  judgeName?: string;
   purpose: string;
-  status: HearingStatus | 'নির্ধারিত' | 'অনুষ্ঠিত' | 'মুলতবি' | 'বাতিল';
+  notes?: string;
+  status: HearingStatus;
   statusBn?: string;
   courtOutcomeSummary?: string;
   nextDate?: string;
@@ -239,6 +280,20 @@ export interface LegalAidCase {
   assignedLawyerId?: string | null;
   assignedLawyerName?: string;
   assignedLawyerBarNo?: string;
+
+  // Canonical Identification & Separation of Stages
+  applicationId?: string; // e.g. "APP-2026-0124"
+  officialCaseId?: string; // e.g. "NLAS-RAJ-2026-0124" (only upon formal registration)
+  deadlineStatus?: DeadlineStatus; // 'NORMAL' | 'APPROACHING' | 'AT_RISK' | 'EXPIRED'
+  activityStatus?: ActivityStatus; // 'ACTIVE' | 'INACTIVE'
+
+  // Separation of Duties & Workflow Tracking
+  submittedBy?: string; // User ID who submitted the application
+  approvedBy?: string; // User ID who approved/verified the application
+  registeredBy?: string; // User ID who formally registered the case (must != submittedBy)
+  rejectionReason?: string;
+  correctionRequiredNote?: string;
+  selfApprovalOverrideReason?: string;
 
   // Normalized Sequential Dates (Part 2)
   filingDate?: string; // ISO 'YYYY-MM-DD'

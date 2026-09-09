@@ -93,6 +93,11 @@ interface LegalAidContextType {
   validationReport: CompleteDemoDataset['validationReport'];
   isDemoDataPanelOpen: boolean;
   setIsDemoDataPanelOpen: (open: boolean) => void;
+  isNewCaseModalOpen: boolean;
+  setIsNewCaseModalOpen: (open: boolean) => void;
+  addNewCase: (newCase: LegalAidCase) => void;
+  addAuditLog: (entry: Omit<AuditLogEntry, 'id' | 'timestamp'>) => void;
+  logAudit: (entry: Omit<AuditLogEntry, 'id' | 'timestamp'>) => void;
   
   // Security & Object-Level Authorization
   checkObjectAccess: (caseRecord: LegalAidCase) => { allowed: boolean; reason?: string };
@@ -141,6 +146,24 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isNikahnamaPreviewOpen, setIsNikahnamaPreviewOpen] = useState(false);
   const [isSimulationModalOpen, setIsSimulationModalOpen] = useState(false);
   const [isDemoDataPanelOpen, setIsDemoDataPanelOpen] = useState(false);
+  const [isNewCaseModalOpen, setIsNewCaseModalOpen] = useState(false);
+
+  const addNewCase = (newCase: LegalAidCase) => {
+    setCases((prev) => [newCase, ...prev]);
+    setSelectedCaseId(newCase.id);
+    setActiveView('case-detail');
+    setNotifications((prev) => [
+      {
+        id: `notif-${Date.now()}`,
+        title: `নতুন আবেদন/মামলা গৃহীত হয়েছে: ${newCase.applicationId || newCase.caseNumber}`,
+        time: 'এখনই',
+        type: 'INFO',
+        read: false,
+        linkCaseId: newCase.id,
+      },
+      ...prev,
+    ]);
+  };
 
   const regenerateDataset = (newSeed?: number) => {
     const seedToUse = newSeed !== undefined ? newSeed : demoSeed;
@@ -210,15 +233,27 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     },
   ]);
 
-  // Object-Level Authorization Rule (Section 20)
+  // Object-Level Authorization Rule (RBAC & BOLA Enforcement)
   const checkObjectAccess = (caseRecord: LegalAidCase): { allowed: boolean; reason?: string } => {
-    // 1. National Officer & System Admin have country-wide read/audit permissions
-    if (currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'NATIONAL_OFFICER') {
+    // 1. National Admin, System Admin & Auditor have country-wide read/audit permissions
+    if (
+      currentUser.role === 'NATIONAL_ADMIN' ||
+      currentUser.role === 'AUDITOR' ||
+      currentUser.role === 'SYSTEM_ADMIN' ||
+      currentUser.role === 'NATIONAL_OFFICER'
+    ) {
       return { allowed: true };
     }
 
-    // 2. District Officer & Assistant Officer only have access to cases in their district
-    if (currentUser.role === 'DISTRICT_OFFICER' || currentUser.role === 'ASSISTANT_OFFICER' || currentUser.role === 'OBSERVER') {
+    // 2. District Admin, Legal Aid Staff, and Judicial Officer only have access to cases in their district
+    if (
+      currentUser.role === 'DISTRICT_LEGAL_AID_ADMIN' ||
+      currentUser.role === 'LEGAL_AID_STAFF' ||
+      currentUser.role === 'JUDICIAL_OFFICER' ||
+      currentUser.role === 'DISTRICT_OFFICER' ||
+      currentUser.role === 'ASSISTANT_OFFICER' ||
+      currentUser.role === 'OBSERVER'
+    ) {
       if (currentUser.district === caseRecord.district) {
         return { allowed: true };
       }
@@ -979,6 +1014,11 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         validationReport,
         isDemoDataPanelOpen,
         setIsDemoDataPanelOpen,
+        isNewCaseModalOpen,
+        setIsNewCaseModalOpen,
+        addNewCase,
+        addAuditLog: logAudit,
+        logAudit,
         checkObjectAccess,
         triggerUnauthorizedCaseAccessDemo,
         triggerBulkDownloadAbuseDemo,

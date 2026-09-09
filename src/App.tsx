@@ -23,9 +23,10 @@ import { SecurityIncidentDetailModal } from './components/SecurityIncidentDetail
 import { NikahnamaPreviewModal } from './components/NikahnamaPreviewModal';
 import { LoginModal } from './components/LoginModal';
 import { DemoDatasetPanel } from './components/DemoDatasetPanel';
+import { NewCaseApplicationModal } from './components/NewCaseApplicationModal';
 
 const AppContent: React.FC = () => {
-  const { activeView, setActiveView } = useLegalAid();
+  const { activeView, setActiveView, isNewCaseModalOpen, setIsNewCaseModalOpen } = useLegalAid();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
 
   return (
@@ -67,6 +68,12 @@ const AppContent: React.FC = () => {
 
       {/* Synthetic Dataset Control & Audit Panel */}
       <DemoDatasetPanel />
+
+      {/* New Case Application 7-Step Statutory Workflow */}
+      <NewCaseApplicationModal
+        isOpen={isNewCaseModalOpen}
+        onClose={() => setIsNewCaseModalOpen(false)}
+      />
     </div>
   );
 };

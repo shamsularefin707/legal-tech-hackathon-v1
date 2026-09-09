@@ -11,6 +11,7 @@ import {
   ChevronDown,
   Lock,
   Database,
+  PlusCircle,
 } from 'lucide-react';
 import { useLegalAid } from '../context/LegalAidContext';
 
@@ -30,6 +31,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenLogin }) => {
     triggerUnauthorizedCaseAccessDemo,
     triggerBulkDownloadAbuseDemo,
     setIsDemoDataPanelOpen,
+    setIsNewCaseModalOpen,
   } = useLegalAid();
 
   const [showNotifications, setShowNotifications] = useState(false);
@@ -96,6 +98,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenLogin }) => {
 
         {/* Right: Synthetic Dataset Controls, Security Sandbox Tools, Notifications, User Info */}
         <div className="flex items-center space-x-2.5">
+          {/* New Application Workflow Trigger */}
+          <button
+            id="btn-header-new-application"
+            onClick={() => setIsNewCaseModalOpen(true)}
+            className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded cursor-pointer transition-colors shadow-xs"
+            title="নতুন আইনি সহায়তা আবেদন ফরম (৭-ধাপ বিশিষ্ট প্রক্রিয়া)"
+          >
+            <PlusCircle className="w-3.5 h-3.5 text-emerald-100" />
+            <span className="hidden sm:inline">নতুন আবেদন</span>
+          </button>
+
           {/* Synthetic Dataset Controls Trigger */}
           <button
             id="btn-demo-dataset"

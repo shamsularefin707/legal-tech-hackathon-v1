@@ -90,60 +90,174 @@ export const DashboardView: React.FC = () => {
         </div>
       </div>
 
-      {/* 6 Compact Statistical Summaries (Section 6) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-        <div className="bg-white border border-gray-300 p-3 rounded-sm">
-          <div className="text-[11px] text-gray-500 font-medium flex items-center justify-between">
-            <span>মোট মামলা</span>
-            <Briefcase className="w-3.5 h-3.5 text-gray-400" />
+      {/* Primary Lifecycle Status Breakdown (Mutually Exclusive: Sum = Total Cases) */}
+      <div className="bg-white border border-gray-300 rounded-sm p-3.5">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3 pb-2 border-b border-gray-200">
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="w-2.5 h-2.5 bg-blue-900 rounded-xs"></span>
+              <h3 className="font-bold text-sm text-gray-900">
+                মামলার পর্যায় ও জীবনচক্র পরিসংখ্যান (Primary Lifecycle Status)
+              </h3>
+              <span className="bg-emerald-100 text-emerald-900 font-bold text-[10px] px-2 py-0.5 rounded border border-emerald-300">
+                গাণিতিক ভারসাম্য: মোট {metrics.totalCases}টি
+              </span>
+            </div>
+            <p className="text-[11px] text-gray-500 mt-0.5">
+              পরস্পর স্বতন্ত্র পর্যায়সমূহ — দাখিল ({metrics.submittedCases}) + পর্যালোচনা ({metrics.underReviewCases}) + নিবন্ধিত ({metrics.registeredCases}) + চলমান ({metrics.ongoingCases}) + অপেক্ষমাণ ({metrics.awaitingResolutionCases}) + নিষ্পত্তি ({metrics.resolvedCases}) + সমাপ্ত ({metrics.closedCases}) = ৫০০
+            </p>
           </div>
-          <div className="text-xl font-bold text-gray-900 mt-1">{totalCases}</div>
-          <div className="text-[10px] text-gray-500 mt-0.5">জেলায় নিবন্ধিত</div>
+          <button
+            onClick={() => setActiveView('cases')}
+            className="text-xs text-blue-900 hover:text-blue-950 font-bold flex items-center space-x-1 hover:underline cursor-pointer shrink-0"
+          >
+            <span>মামলা রেজিস্টার দেখুন</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
         </div>
 
-        <div className="bg-white border border-gray-300 p-3 rounded-sm">
-          <div className="text-[11px] text-gray-500 font-medium flex items-center justify-between">
-            <span>চলমান মামলা</span>
-            <TrendingUp className="w-3.5 h-3.5 text-blue-600" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+          <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-sm">
+            <div className="text-[10px] text-gray-600 font-semibold">দাখিলকৃত (Submitted)</div>
+            <div className="text-lg font-bold text-gray-900 mt-0.5">{metrics.submittedCases}</div>
+            <div className="text-[10px] text-gray-500 mt-0.5">প্রাথমিক আবেদন</div>
           </div>
-          <div className="text-xl font-bold text-blue-950 mt-1">{activeCases}</div>
-          <div className="text-[10px] text-blue-700 mt-0.5">বিচার প্রক্রিয়ায়</div>
+
+          <div className="bg-indigo-50 border border-indigo-200 p-2.5 rounded-sm">
+            <div className="text-[10px] text-indigo-900 font-semibold">পর্যালোচনাধীন (Review)</div>
+            <div className="text-lg font-bold text-indigo-950 mt-0.5">{metrics.underReviewCases}</div>
+            <div className="text-[10px] text-indigo-700 mt-0.5">যোগ্যতা যাচাই</div>
+          </div>
+
+          <div className="bg-amber-50 border border-amber-200 p-2.5 rounded-sm">
+            <div className="text-[10px] text-amber-900 font-semibold">নিবন্ধিত (Registered)</div>
+            <div className="text-lg font-bold text-amber-950 mt-0.5">{metrics.registeredCases}</div>
+            <div className="text-[10px] text-amber-700 mt-0.5">আইনজীবী অপেক্ষমাণ</div>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 p-2.5 rounded-sm">
+            <div className="text-[10px] text-blue-900 font-semibold">চলমান (Ongoing)</div>
+            <div className="text-lg font-bold text-blue-950 mt-0.5">{metrics.ongoingCases}</div>
+            <div className="text-[10px] text-blue-700 mt-0.5">বিজ্ঞ আদালতে শুনানাধীন</div>
+          </div>
+
+          <div className="bg-purple-50 border border-purple-200 p-2.5 rounded-sm">
+            <div className="text-[10px] text-purple-900 font-semibold">অপেক্ষমাণ (Awaiting)</div>
+            <div className="text-lg font-bold text-purple-950 mt-0.5">{metrics.awaitingResolutionCases}</div>
+            <div className="text-[10px] text-purple-700 mt-0.5">রায় বা সিদ্ধান্ত পর্ব</div>
+          </div>
+
+          <div className="bg-emerald-50 border border-emerald-200 p-2.5 rounded-sm">
+            <div className="text-[10px] text-emerald-900 font-semibold">নিষ্পত্তি (Resolved)</div>
+            <div className="text-lg font-bold text-emerald-950 mt-0.5">{metrics.resolvedCases}</div>
+            <div className="text-[10px] text-emerald-700 mt-0.5">আইনি রায় কার্যকর</div>
+          </div>
+
+          <div className="bg-gray-100 border border-gray-300 p-2.5 rounded-sm">
+            <div className="text-[10px] text-gray-700 font-semibold">সমাপ্ত (Closed)</div>
+            <div className="text-lg font-bold text-gray-900 mt-0.5">{metrics.closedCases}</div>
+            <div className="text-[10px] text-gray-500 mt-0.5">নথিভুক্ত ও সমাপ্ত</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Orthogonal Dimensions: Deadlines, Activity, and Daily Operations */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {/* Dimension 1: সময়সীমা ও SLA অবস্থা */}
+        <div className="bg-white border border-gray-300 rounded-sm p-3.5">
+          <div className="flex items-center justify-between border-b border-gray-200 pb-2 mb-2.5">
+            <div className="flex items-center space-x-1.5">
+              <Clock className="w-4 h-4 text-red-600" />
+              <h4 className="font-bold text-xs text-gray-900">
+                সময়সীমা অবস্থা (Deadline Status)
+              </h4>
+            </div>
+            <button
+              onClick={() => setActiveView('deadlines')}
+              className="text-[11px] text-blue-900 font-semibold hover:underline"
+            >
+              বিস্তারিত →
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="bg-red-50 border border-red-200 p-2 rounded">
+              <span className="text-[10px] font-semibold text-red-800">অতিক্রান্ত (Expired)</span>
+              <div className="text-base font-bold text-red-950 mt-0.5">{metrics.expiredCases}</div>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 p-2 rounded">
+              <span className="text-[10px] font-semibold text-amber-800">ঝুঁকিপূর্ণ (≤৭ দিন)</span>
+              <div className="text-base font-bold text-amber-950 mt-0.5">{metrics.atRiskCases}</div>
+            </div>
+            <div className="bg-yellow-50 border border-yellow-200 p-2 rounded">
+              <span className="text-[10px] font-semibold text-yellow-800">আসন্ন (≤২০ দিন)</span>
+              <div className="text-base font-bold text-yellow-950 mt-0.5">{metrics.approachingCases}</div>
+            </div>
+            <div className="bg-slate-50 border border-slate-200 p-2 rounded">
+              <span className="text-[10px] font-semibold text-slate-700">স্বাভাবিক SLA</span>
+              <div className="text-base font-bold text-slate-900 mt-0.5">{metrics.normalDeadlineCases}</div>
+            </div>
+          </div>
         </div>
 
-        <div className="bg-white border border-gray-300 p-3 rounded-sm">
-          <div className="text-[11px] text-gray-500 font-medium flex items-center justify-between">
-            <span>নিষ্পত্তির অপেক্ষায়</span>
-            <Clock className="w-3.5 h-3.5 text-emerald-600" />
+        {/* Dimension 2: কার্যক্রম ও স্থবিরতা অবস্থা */}
+        <div className="bg-white border border-gray-300 rounded-sm p-3.5">
+          <div className="flex items-center justify-between border-b border-gray-200 pb-2 mb-2.5">
+            <div className="flex items-center space-x-1.5">
+              <TrendingUp className="w-4 h-4 text-blue-600" />
+              <h4 className="font-bold text-xs text-gray-900">
+                সচলতা অবস্থা (Activity Status)
+              </h4>
+            </div>
+            <button
+              onClick={() => setActiveView('stuck-cases')}
+              className="text-[11px] text-blue-900 font-semibold hover:underline"
+            >
+              স্থবির মামলা →
+            </button>
           </div>
-          <div className="text-xl font-bold text-emerald-950 mt-1">{pendingDisposal}</div>
-          <div className="text-[10px] text-emerald-700 mt-0.5">রায় বা আপস পর্ব</div>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="bg-blue-50 border border-blue-200 p-2 rounded">
+              <span className="text-[10px] font-semibold text-blue-800">সক্রিয় মামলা</span>
+              <div className="text-base font-bold text-blue-950 mt-0.5">{metrics.activeCases}</div>
+              <div className="text-[9px] text-blue-700 mt-0.5">নিয়মিত পদক্ষেপমান</div>
+            </div>
+            <div className="bg-orange-50 border border-orange-200 p-2 rounded">
+              <span className="text-[10px] font-semibold text-orange-800">স্থবির মামলা (≥৩০ দিন)</span>
+              <div className="text-base font-bold text-orange-950 mt-0.5">{metrics.inactiveCases}</div>
+              <div className="text-[9px] text-orange-700 mt-0.5">দীর্ঘসূত্র পর্যালোচনা</div>
+            </div>
+          </div>
         </div>
 
-        <div className="bg-white border border-red-300 bg-red-50/40 p-3 rounded-sm">
-          <div className="text-[11px] text-red-700 font-medium flex items-center justify-between">
-            <span>সময়সীমা অতিক্রান্ত</span>
-            <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+        {/* Dimension 3: আজকের কার্যতালিকা ও নিয়োগ */}
+        <div className="bg-white border border-gray-300 rounded-sm p-3.5">
+          <div className="flex items-center justify-between border-b border-gray-200 pb-2 mb-2.5">
+            <div className="flex items-center space-x-1.5">
+              <Calendar className="w-4 h-4 text-emerald-600" />
+              <h4 className="font-bold text-xs text-gray-900">
+                দৈনিক বিচারিক পরিচালনা
+              </h4>
+            </div>
+            <span className="text-[10px] text-gray-500">০৯ সেপ্টেম্বর ২০২৬</span>
           </div>
-          <div className="text-xl font-bold text-red-900 mt-1">{overdueCount}</div>
-          <div className="text-[10px] text-red-700 mt-0.5">জরুরি পদক্ষেপ প্রযোজ্য</div>
-        </div>
-
-        <div className="bg-white border border-gray-300 p-3 rounded-sm">
-          <div className="text-[11px] text-gray-500 font-medium flex items-center justify-between">
-            <span>আজকের শুনানি</span>
-            <Calendar className="w-3.5 h-3.5 text-gray-500" />
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div
+              onClick={() => setActiveView('hearings')}
+              className="bg-emerald-50 border border-emerald-200 p-2 rounded cursor-pointer hover:bg-emerald-100 transition-colors"
+            >
+              <span className="text-[10px] font-semibold text-emerald-800">আজকের নির্ধারিত শুনানি</span>
+              <div className="text-base font-bold text-emerald-950 mt-0.5">{metrics.todaysHearingsCount}</div>
+              <div className="text-[9px] text-emerald-700 mt-0.5">আদালত কজলিস্টে অন্তর্ভুক্ত</div>
+            </div>
+            <div
+              onClick={() => setActiveView('lawyers')}
+              className="bg-amber-50 border border-amber-200 p-2 rounded cursor-pointer hover:bg-amber-100 transition-colors"
+            >
+              <span className="text-[10px] font-semibold text-amber-800">আইনজীবী অপেক্ষমাণ</span>
+              <div className="text-base font-bold text-amber-950 mt-0.5">{metrics.lawyerAssignmentPendingCount}</div>
+              <div className="text-[9px] text-amber-700 mt-0.5">LADCS তালিকাভুক্ত</div>
+            </div>
           </div>
-          <div className="text-xl font-bold text-gray-900 mt-1">{todayHearings}</div>
-          <div className="text-[10px] text-gray-500 mt-0.5">বিজ্ঞ আদালতে ধার্য</div>
-        </div>
-
-        <div className="bg-white border border-amber-300 bg-amber-50/40 p-3 rounded-sm">
-          <div className="text-[11px] text-amber-800 font-medium flex items-center justify-between">
-            <span>আইনজীবী অপেক্ষমাণ</span>
-            <UserCheck className="w-3.5 h-3.5 text-amber-600" />
-          </div>
-          <div className="text-xl font-bold text-amber-950 mt-1">{pendingLawyerAssignmentCount}</div>
-          <div className="text-[10px] text-amber-800 mt-0.5">নিয়োগ প্রক্রিয়াধীন</div>
         </div>
       </div>
 
