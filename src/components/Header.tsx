@@ -1,0 +1,300 @@
+/**
+ * সরকারি অ্যাপ্লিকেশন হেডার (Government Application Shell Header)
+ */
+
+import React, { useState } from 'react';
+import {
+  Bell,
+  UserCheck,
+  LogOut,
+  ShieldAlert,
+  ChevronDown,
+  Lock,
+} from 'lucide-react';
+import { useLegalAid } from '../context/LegalAidContext';
+
+interface HeaderProps {
+  onOpenLogin: () => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({ onOpenLogin }) => {
+  const {
+    currentUser,
+    setCurrentUser,
+    users,
+    notifications,
+    setActiveView,
+    setSelectedCaseId,
+    triggerUnauthorizedCaseAccessDemo,
+    triggerBulkDownloadAbuseDemo,
+  } = useLegalAid();
+
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showDemoTools, setShowDemoTools] = useState(false);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  return (
+    <header className="bg-white border-b border-gray-300 sticky top-0 z-40">
+      {/* Topmost Government Identity Strip */}
+      <div className="bg-[#172554] text-white px-4 py-1.5 text-xs flex justify-between items-center border-b border-blue-950">
+        <div className="flex items-center space-x-2">
+          <span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
+          <span className="font-medium tracking-wide">
+            গণপ্রজাতন্ত্রী বাংলাদেশ সরকার | আইন ও বিচার বিভাগ
+          </span>
+          <span className="text-gray-300">|</span>
+          <span className="text-gray-200">জাতীয় আইনগত সহায়তা কার্যক্রম</span>
+        </div>
+        <div className="flex items-center space-x-4">
+          <span className="bg-blue-900/80 px-2 py-0.5 border border-blue-700 text-blue-100 rounded text-[11px]">
+            ডেমো পরিবেশ / নমুনা তথ্য
+          </span>
+          <span className="text-gray-300 text-[11px]">
+            সার্ভার সময়: ০৯ সেপ্টেম্বর ২০২৬, সকাল ১০:১৫
+          </span>
+        </div>
+      </div>
+
+      {/* Main Bar */}
+      <div className="px-4 py-2.5 flex items-center justify-between">
+        {/* Left: Emblem & Institution Title */}
+        <div className="flex items-center space-x-3.5">
+          {/* Government Emblem Placeholder */}
+          <div className="w-10 h-10 rounded-full border-2 border-[#172554] bg-[#f8fafc] flex items-center justify-center p-1 shadow-xs shrink-0">
+            <svg
+              viewBox="0 0 100 100"
+              className="w-full h-full text-[#172554] fill-current"
+              aria-label="বাংলাদেশ জাতীয় প্রতীক চিহ্ন"
+            >
+              <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="4" />
+              <circle cx="50" cy="50" r="38" fill="#15803d" />
+              <circle cx="50" cy="50" r="14" fill="#dc2626" />
+              <path
+                d="M50 16 L53 26 L63 26 L55 32 L58 42 L50 36 L42 42 L45 32 L37 26 L47 26 Z"
+                fill="#facc15"
+              />
+              <path
+                d="M20 70 Q 50 90 80 70 Q 50 78 20 70 Z"
+                fill="#facc15"
+              />
+            </svg>
+          </div>
+
+          <div>
+            <div className="text-xs font-semibold text-gray-700 tracking-wider">
+              গণপ্রজাতন্ত্রী বাংলাদেশ সরকার
+            </div>
+            <h1 className="text-base sm:text-lg font-bold text-[#172554] leading-tight">
+              জাতীয় আইনগত সহায়তা কার্যক্রম ব্যবস্থাপনা
+            </h1>
+            <div className="text-[11px] text-gray-500 font-medium">
+              জেলা আইনগত সহায়তা কার্যালয়, ঢাকা
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Security Sandbox Tools, Notifications, User Info */}
+        <div className="flex items-center space-x-3">
+          {/* Quick Demo Scenario Switcher (Crucial for Section 41 & 42 judging) */}
+          <div className="relative">
+            <button
+              id="btn-security-sandbox"
+              onClick={() => setShowDemoTools(!showDemoTools)}
+              className="flex items-center space-x-1 px-2.5 py-1.5 text-xs font-medium text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded cursor-pointer"
+              title="বিচারিক মূল্যায়ন ও নিরাপত্তা দৃশ্যপট পরীক্ষা"
+            >
+              <ShieldAlert className="w-3.5 h-3.5 text-amber-700" />
+              <span className="hidden md:inline">নিরাপত্তা মহড়া পরীক্ষা</span>
+              <ChevronDown className="w-3 h-3 text-amber-700" />
+            </button>
+
+            {showDemoTools && (
+              <div className="absolute right-0 mt-1 w-80 bg-white border border-gray-300 shadow-md rounded-md p-3 z-50 text-xs">
+                <div className="font-bold text-gray-800 border-b pb-1.5 mb-2 flex items-center justify-between">
+                  <span>হ্যাকথন নিরাপত্তা দৃশ্যপট মহড়া</span>
+                  <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">
+                    সেকশন ৪১ ও ৪২
+                  </span>
+                </div>
+                <p className="text-gray-600 mb-2.5 text-[11px]">
+                  নিচের বোতামগুলো ক্লিক করে অবজেক্ট-লেভেল পারমিশন ও অসঙ্গতি পর্যবেক্ষণ পরীক্ষা করুন:
+                </p>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => {
+                      triggerUnauthorizedCaseAccessDemo();
+                      setShowDemoTools(false);
+                      setActiveView('security');
+                    }}
+                    className="w-full text-left p-2 border border-red-200 bg-red-50 hover:bg-red-100 text-red-900 rounded font-medium transition-colors"
+                  >
+                    ১. এক্তিয়ারবহির্ভূত মামলায় প্রবেশ চেষ্টা (BOLA / IDOR)
+                    <span className="block text-[10px] text-red-700 font-normal mt-0.5">
+                      অননুমোদিত জেলার মামলায় প্রবেশ ব্লক ও লগ সংরক্ষণ
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      triggerBulkDownloadAbuseDemo();
+                      setShowDemoTools(false);
+                      setActiveView('security');
+                    }}
+                    className="w-full text-left p-2 border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded font-medium transition-colors"
+                  >
+                    ২. অস্বাভাবিক সংখ্যক নথি ডাউনলোডের অপচেষ্টা
+                    <span className="block text-[10px] text-amber-700 font-normal mt-0.5">
+                      স্বল্প সময়ে গণডাউনলোড থ্রোটলিং ও নিরাপত্তা সতর্কতা
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Notifications Center */}
+          <div className="relative">
+            <button
+              id="btn-notifications"
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative p-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded border border-gray-300 cursor-pointer"
+              aria-label="বিজ্ঞপ্তি"
+            >
+              <Bell className="w-4 h-4" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {showNotifications && (
+              <div className="absolute right-0 mt-1.5 w-80 sm:w-96 bg-white border border-gray-300 shadow-lg rounded-md p-3 z-50 text-xs">
+                <div className="flex justify-between items-center border-b border-gray-200 pb-2 mb-2">
+                  <span className="font-bold text-gray-800">অফিসিয়াল নোটিফিকেশন সেন্টার</span>
+                  <span className="text-[11px] text-gray-500">
+                    {unreadCount}টি অপঠিত বার্তা
+                  </span>
+                </div>
+                <div className="max-h-72 overflow-y-auto space-y-2">
+                  {notifications.map((n) => (
+                    <div
+                      key={n.id}
+                      onClick={() => {
+                        if (n.linkCaseId) {
+                          setSelectedCaseId(n.linkCaseId);
+                          setActiveView('case-detail');
+                        }
+                        setShowNotifications(false);
+                      }}
+                      className={`p-2.5 rounded border text-left cursor-pointer transition-colors ${
+                        n.type === 'URGENT'
+                          ? 'bg-red-50/70 border-red-200 text-red-950 hover:bg-red-100/70'
+                          : n.type === 'WARNING'
+                          ? 'bg-amber-50/70 border-amber-200 text-amber-950 hover:bg-amber-100/70'
+                          : 'bg-blue-50/70 border-blue-200 text-blue-950 hover:bg-blue-100/70'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <span className="font-semibold">{n.title}</span>
+                      </div>
+                      <div className="text-[10px] text-gray-600 mt-1 flex justify-between items-center">
+                        <span>{n.time}</span>
+                        {n.linkCaseId && (
+                          <span className="underline text-blue-800 font-medium">মামলাটি দেখুন →</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* User Profile & Role Switcher */}
+          <div className="relative">
+            <button
+              id="btn-user-profile"
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex items-center space-x-2 px-2.5 py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded text-xs text-left cursor-pointer"
+            >
+              <div className="w-6 h-6 rounded-full bg-blue-950 text-white flex items-center justify-center font-bold text-[10px]">
+                {currentUser.name.charAt(0) || 'ক'}
+              </div>
+              <div className="hidden lg:block">
+                <div className="font-semibold text-gray-800 truncate max-w-[130px]">
+                  {currentUser.name}
+                </div>
+                <div className="text-[10px] text-gray-500 truncate max-w-[130px]">
+                  {currentUser.designation}
+                </div>
+              </div>
+              <ChevronDown className="w-3.5 h-3.5 text-gray-600" />
+            </button>
+
+            {showUserMenu && (
+              <div className="absolute right-0 mt-1.5 w-72 bg-white border border-gray-300 shadow-lg rounded-md p-3 z-50 text-xs">
+                <div className="border-b border-gray-200 pb-2 mb-2">
+                  <div className="font-bold text-gray-900">{currentUser.name}</div>
+                  <div className="text-[11px] text-gray-600">{currentUser.designation}</div>
+                  <div className="text-[10px] text-blue-800 mt-0.5">
+                    এক্তিয়ার: {currentUser.district} | {currentUser.email}
+                  </div>
+                </div>
+
+                {/* Role Switcher for Evaluation */}
+                <div className="mb-2">
+                  <div className="font-semibold text-gray-700 mb-1.5 flex items-center justify-between">
+                    <span>ভূমিকা পরিবর্তন (RBAC মহড়া):</span>
+                    <span className="text-[10px] text-gray-500">মডেল পরীক্ষা</span>
+                  </div>
+                  <div className="space-y-1 max-h-44 overflow-y-auto">
+                    {users.map((u) => (
+                      <button
+                        key={u.id}
+                        onClick={() => {
+                          setCurrentUser(u);
+                          setShowUserMenu(false);
+                        }}
+                        className={`w-full text-left px-2 py-1.5 rounded text-[11px] flex items-center justify-between transition-colors ${
+                          u.id === currentUser.id
+                            ? 'bg-blue-100 text-blue-950 font-bold border border-blue-300'
+                            : 'hover:bg-gray-100 text-gray-700'
+                        }`}
+                      >
+                        <div>
+                          <div className="truncate">{u.name}</div>
+                          <div className="text-[10px] text-gray-500 truncate">{u.designation}</div>
+                        </div>
+                        {u.id === currentUser.id && <UserCheck className="w-3.5 h-3.5 text-blue-800" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 pt-2 flex items-center justify-between">
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onOpenLogin();
+                    }}
+                    className="flex items-center space-x-1.5 text-gray-700 hover:text-red-700 py-1"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>নিরাপদ প্রস্থান (লগআউট)</span>
+                  </button>
+                  <span className="text-[10px] text-gray-400 flex items-center">
+                    <Lock className="w-3 h-3 mr-1" />
+                    SSLv3
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+};

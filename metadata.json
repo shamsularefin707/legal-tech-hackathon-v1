@@ -1,0 +1,6 @@
+{
+  "name": "জাতীয় আইনগত সহায়তা কার্যক্রম ব্যবস্থাপনা",
+  "description": "জেলা ও জাতীয় পর্যায়ের সরকারি আইনগত সহায়তা মামলা, প্যানেল আইনজীবী ও বিচারিক কার্যক্রম ব্যবস্থাপনা ব্যবস্থা",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
