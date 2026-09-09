@@ -34,24 +34,30 @@ export const DashboardView: React.FC = () => {
     runSecuritySimulation,
   } = useLegalAid();
 
-  // Metrics
-  const totalCases = 142; // Real district aggregate count
-  const activeCases = 89;
-  const pendingDisposal = 18;
-  const overdueCount = cases.filter((c) =>
-    c.deadlines.some((d) => d.status === 'OVERDUE')
-  ).length + 3; // Realistic count
-  const todayHearings = 4;
+  // Dynamic Metrics derived from synthetic dataset
+  const totalCases = cases.length;
+  const activeCases = cases.filter((c) => c.status !== 'DISPOSED').length;
+  const pendingDisposal = cases.filter(
+    (c) => c.status === 'HEARING_ONGOING' || c.status === 'MEDIATION_ONGOING'
+  ).length;
+  const overdueCount = cases.filter(
+    (c) => c.slaStatus === 'BREACHED' || c.deadlines.some((d) => d.status === 'OVERDUE')
+  ).length;
+  const todayHearings = cases.filter(
+    (c) => c.hearings && c.hearings.length > 0 && c.status === 'HEARING_ONGOING'
+  ).length;
   const pendingLawyerAssignmentCount = cases.filter(
     (c) => c.status === 'PENDING_LAWYER_ASSIGNMENT'
   ).length;
 
-  // High Priority Cases
-  const priorityCases = cases.filter(
-    (c) =>
-      c.priorityAssessment.calculatedPriority === 'VERY_HIGH' ||
-      c.priorityAssessment.calculatedPriority === 'HIGH'
-  );
+  // High Priority Cases (Sorted by score descending)
+  const priorityCases = cases
+    .filter(
+      (c) =>
+        c.priorityAssessment.calculatedPriority === 'VERY_HIGH' ||
+        c.priorityAssessment.calculatedPriority === 'HIGH'
+    )
+    .sort((a, b) => b.priorityAssessment.score - a.priorityAssessment.score);
 
   return (
     <div className="space-y-4">
@@ -60,8 +66,8 @@ export const DashboardView: React.FC = () => {
         <div>
           <div className="flex items-center space-x-2">
             <h2 className="text-xl font-bold text-gray-900">ড্যাশবোর্ড</h2>
-            <span className="bg-blue-100 text-blue-900 text-[11px] font-semibold px-2 py-0.5 rounded border border-blue-200">
-              নমুনা তথ্য / ডেমো পরিবেশ
+            <span className="bg-amber-100 text-blue-950 text-[11px] font-bold px-2 py-0.5 rounded border border-amber-300">
+              ডেমো পরিবেশ • ৫০০ সিন্থেটিক মামলা
             </span>
           </div>
           <p className="text-xs text-gray-600 mt-0.5">
@@ -264,7 +270,7 @@ export const DashboardView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {priorityCases.map((c) => (
+                  {priorityCases.slice(0, 6).map((c) => (
                     <tr
                       key={c.id}
                       className={`hover:bg-blue-50/40 transition-colors ${
@@ -360,7 +366,7 @@ export const DashboardView: React.FC = () => {
               </span>
             </div>
             <div className="p-3 space-y-2">
-              {stuckCases.map((sc) => (
+              {stuckCases.slice(0, 5).map((sc) => (
                 <div
                   key={sc.id}
                   className="border border-amber-200 bg-amber-50/20 p-2.5 rounded text-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2"

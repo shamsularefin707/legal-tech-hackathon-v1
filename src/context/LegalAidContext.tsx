@@ -19,13 +19,14 @@ import {
 } from '../types/legalAid';
 import {
   INITIAL_USERS,
-  INITIAL_PANEL_LAWYERS,
-  INITIAL_CASES,
-  INITIAL_AUDIT_LOGS,
-  INITIAL_SECURITY_EVENTS,
-  INITIAL_VULNERABILITIES,
   INITIAL_SECURITY_INCIDENTS,
 } from '../data/initialData';
+import {
+  generateCompleteDemoDataset,
+  recalculateLawyerWorkloads,
+  DEFAULT_DEMO_DATA_SEED,
+  CompleteDemoDataset,
+} from '../data/demoGenerator';
 
 export interface NotificationItem {
   id: string;
@@ -82,6 +83,14 @@ interface LegalAidContextType {
   setIsSimulationModalOpen: (open: boolean) => void;
   simulationState: SimulationState;
   
+  // Synthetic Demo Dataset Management & Controls
+  demoSeed: number;
+  regenerateDataset: (newSeed?: number) => void;
+  resetToDefaultSeed: () => void;
+  validationReport: CompleteDemoDataset['validationReport'];
+  isDemoDataPanelOpen: boolean;
+  setIsDemoDataPanelOpen: (open: boolean) => void;
+  
   // Security & Object-Level Authorization
   checkObjectAccess: (caseRecord: LegalAidCase) => { allowed: boolean; reason?: string };
   triggerUnauthorizedCaseAccessDemo: () => void;
@@ -107,16 +116,20 @@ interface LegalAidContextType {
 const LegalAidContext = createContext<LegalAidContextType | undefined>(undefined);
 
 export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [demoSeed, setDemoSeed] = useState<number>(DEFAULT_DEMO_DATA_SEED);
+  const initialDataset = useMemo(() => generateCompleteDemoDataset(DEFAULT_DEMO_DATA_SEED), []);
+
   const [users] = useState<User[]>(INITIAL_USERS);
   const [currentUser, setCurrentUser] = useState<User>(INITIAL_USERS[0]); // Default to District Officer
-  const [cases, setCases] = useState<LegalAidCase[]>(INITIAL_CASES);
-  const [lawyers, setLawyers] = useState<PanelLawyer[]>(INITIAL_PANEL_LAWYERS);
-  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(INITIAL_AUDIT_LOGS);
-  const [securityEvents, setSecurityEvents] = useState<SecurityEvent[]>(INITIAL_SECURITY_EVENTS);
-  const [vulnerabilities, setVulnerabilities] = useState<VulnerabilityItem[]>(INITIAL_VULNERABILITIES);
+  const [cases, setCases] = useState<LegalAidCase[]>(initialDataset.cases);
+  const [lawyers, setLawyers] = useState<PanelLawyer[]>(initialDataset.lawyers);
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(initialDataset.auditLogs);
+  const [securityEvents, setSecurityEvents] = useState<SecurityEvent[]>(initialDataset.securityEvents);
+  const [vulnerabilities, setVulnerabilities] = useState<VulnerabilityItem[]>(initialDataset.vulnerabilities);
+  const [validationReport, setValidationReport] = useState(initialDataset.validationReport);
   const [securityIncidents, setSecurityIncidents] = useState<SecurityIncident[]>(INITIAL_SECURITY_INCIDENTS);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>('case-1284');
-  const [selectedVulnerabilityId, setSelectedVulnerabilityId] = useState<string | null>('vuln-bac-01');
+  const [selectedVulnerabilityId, setSelectedVulnerabilityId] = useState<string | null>('VULN-DEMO-001');
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>('inc-42');
   const [activeView, setActiveView] = useState<string>('dashboard');
 
@@ -124,6 +137,34 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
   const [isNikahnamaPreviewOpen, setIsNikahnamaPreviewOpen] = useState(false);
   const [isSimulationModalOpen, setIsSimulationModalOpen] = useState(false);
+  const [isDemoDataPanelOpen, setIsDemoDataPanelOpen] = useState(false);
+
+  const regenerateDataset = (newSeed?: number) => {
+    const seedToUse = newSeed !== undefined ? newSeed : demoSeed;
+    setDemoSeed(seedToUse);
+    const fresh = generateCompleteDemoDataset(seedToUse);
+    setCases(fresh.cases);
+    setLawyers(fresh.lawyers);
+    setSecurityEvents(fresh.securityEvents);
+    setVulnerabilities(fresh.vulnerabilities);
+    setAuditLogs(fresh.auditLogs);
+    setValidationReport(fresh.validationReport);
+    setSelectedCaseId('case-1284');
+    setNotifications((prev) => [
+      {
+        id: `notif-${Date.now()}`,
+        title: `সিন্থেটিক ডেটাসেট সফলভাবে পুনর্জেনারেট করা হয়েছে (বীজ: ${seedToUse})।`,
+        time: 'এখনই',
+        type: 'INFO',
+        read: false,
+      },
+      ...prev,
+    ]);
+  };
+
+  const resetToDefaultSeed = () => {
+    regenerateDataset(DEFAULT_DEMO_DATA_SEED);
+  };
 
   const [simulationState, setSimulationState] = useState<SimulationState>({
     isRunning: false,
@@ -886,11 +927,15 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return cases.filter((c) => c.daysWithoutActivity >= 7 && c.status !== 'DISPOSED' && c.status !== 'CLOSED');
   }, [cases]);
 
-  // Computed deadlines at risk count (Section 41 & Section 15)
+  // Computed deadlines at risk count (Derived dynamically from cases)
   const atRiskDeadlinesCount = useMemo(() => {
-    // 11 cases at risk as requested in prompt Section 41.2
-    return 11;
-  }, []);
+    return cases.filter(
+      (c) =>
+        c.slaStatus === 'APPROACHING_RISK' ||
+        c.slaStatus === 'BREACHED' ||
+        c.deadlines.some((d) => d.status === 'OVERDUE' || d.daysRemaining <= 3)
+    ).length;
+  }, [cases]);
 
   return (
     <LegalAidContext.Provider
@@ -920,6 +965,12 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         isSimulationModalOpen,
         setIsSimulationModalOpen,
         simulationState,
+        demoSeed,
+        regenerateDataset,
+        resetToDefaultSeed,
+        validationReport,
+        isDemoDataPanelOpen,
+        setIsDemoDataPanelOpen,
         checkObjectAccess,
         triggerUnauthorizedCaseAccessDemo,
         triggerBulkDownloadAbuseDemo,

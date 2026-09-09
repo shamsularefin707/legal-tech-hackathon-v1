@@ -22,8 +22,9 @@ export const CasesListView: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [selectedPriority, setSelectedPriority] = useState<string>('ALL');
   const [selectedDistrict, setSelectedDistrict] = useState<string>('ALL');
+  const [selectedSLA, setSelectedSLA] = useState<string>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const [itemsPerPage, setItemsPerPage] = useState(12);
 
   // Filtered List
   const filteredCases = useMemo(() => {
@@ -33,7 +34,8 @@ export const CasesListView: React.FC = () => {
         c.applicant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (c.assignedLawyerName &&
           c.assignedLawyerName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        c.upazila.toLowerCase().includes(searchQuery.toLowerCase());
+        c.upazila.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.district.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesCategory =
         selectedCategory === 'ALL' || c.category === selectedCategory;
@@ -44,10 +46,15 @@ export const CasesListView: React.FC = () => {
         c.priorityAssessment.calculatedPriority === selectedPriority;
       const matchesDistrict =
         selectedDistrict === 'ALL' || c.district === selectedDistrict;
+      const matchesSLA =
+        selectedSLA === 'ALL' ||
+        (selectedSLA === 'BREACHED' && c.slaStatus === 'BREACHED') ||
+        (selectedSLA === 'APPROACHING_RISK' && c.slaStatus === 'APPROACHING_RISK') ||
+        (selectedSLA === 'NORMAL' && c.slaStatus === 'NORMAL');
 
-      return matchesSearch && matchesCategory && matchesStatus && matchesPriority && matchesDistrict;
+      return matchesSearch && matchesCategory && matchesStatus && matchesPriority && matchesDistrict && matchesSLA;
     });
-  }, [cases, searchQuery, selectedCategory, selectedStatus, selectedPriority, selectedDistrict]);
+  }, [cases, searchQuery, selectedCategory, selectedStatus, selectedPriority, selectedDistrict, selectedSLA]);
 
   const totalPages = Math.ceil(filteredCases.length / itemsPerPage) || 1;
   const paginatedCases = filteredCases.slice(
@@ -118,26 +125,125 @@ export const CasesListView: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter / Search Bar */}
+      {/* Filter / Search Bar & Quick Chips */}
       <div className="bg-white border border-gray-300 p-3 rounded-sm space-y-2.5 text-xs">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+        {/* Quick Filter Badges */}
+        <div className="flex flex-wrap items-center gap-1.5 pb-1 border-b border-gray-100">
+          <span className="text-gray-500 font-semibold mr-1">দ্রুত ফিল্টার:</span>
+          <button
+            onClick={() => {
+              setSelectedCategory('ALL');
+              setSelectedStatus('ALL');
+              setSelectedDistrict('ALL');
+              setSelectedSLA('ALL');
+              setCurrentPage(1);
+            }}
+            className={`px-2 py-0.5 rounded cursor-pointer ${
+              selectedCategory === 'ALL' && selectedStatus === 'ALL' && selectedDistrict === 'ALL' && selectedSLA === 'ALL'
+                ? 'bg-[#172554] text-white font-bold'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            সকল ({cases.length})
+          </button>
+          <button
+            onClick={() => {
+              setSelectedStatus('PENDING_LAWYER_ASSIGNMENT');
+              setCurrentPage(1);
+            }}
+            className={`px-2 py-0.5 rounded cursor-pointer ${
+              selectedStatus === 'PENDING_LAWYER_ASSIGNMENT'
+                ? 'bg-amber-800 text-white font-bold'
+                : 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100'
+            }`}
+          >
+            আইনজীবী অপেক্ষমাণ ({cases.filter(c => c.status === 'PENDING_LAWYER_ASSIGNMENT').length})
+          </button>
+          <button
+            onClick={() => {
+              setSelectedSLA('BREACHED');
+              setCurrentPage(1);
+            }}
+            className={`px-2 py-0.5 rounded cursor-pointer ${
+              selectedSLA === 'BREACHED'
+                ? 'bg-red-800 text-white font-bold'
+                : 'bg-red-50 text-red-900 border border-red-200 hover:bg-red-100'
+            }`}
+          >
+            এসএলএ বিলম্বিত ({cases.filter(c => c.slaStatus === 'BREACHED').length})
+          </button>
+          <button
+            onClick={() => {
+              setSelectedCategory('WOMEN_CHILD');
+              setCurrentPage(1);
+            }}
+            className={`px-2 py-0.5 rounded cursor-pointer ${
+              selectedCategory === 'WOMEN_CHILD'
+                ? 'bg-purple-800 text-white font-bold'
+                : 'bg-purple-50 text-purple-900 border border-purple-200 hover:bg-purple-100'
+            }`}
+          >
+            নারী ও শিশু ({cases.filter(c => c.category === 'WOMEN_CHILD').length})
+          </button>
+          <button
+            onClick={() => {
+              setSelectedCategory('LAND_PROPERTY');
+              setCurrentPage(1);
+            }}
+            className={`px-2 py-0.5 rounded cursor-pointer ${
+              selectedCategory === 'LAND_PROPERTY'
+                ? 'bg-emerald-800 text-white font-bold'
+                : 'bg-emerald-50 text-emerald-900 border border-emerald-200 hover:bg-emerald-100'
+            }`}
+          >
+            জমি ও সম্পত্তি ({cases.filter(c => c.category === 'LAND_PROPERTY').length})
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
           {/* Search */}
           <div className="relative sm:col-span-2">
             <Search className="w-4 h-4 text-gray-400 absolute left-2.5 top-2.5" />
             <input
               type="text"
-              placeholder="মামলা নং, আবেদনকারী, আইনজীবী অথবা উপজেলা দিয়ে খুঁজুন..."
+              placeholder="মামলা নং, আবেদনকারী, আইনজীবী, জেলা..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-900 focus:outline-none"
             />
+          </div>
+
+          {/* District Filter */}
+          <div>
+            <select
+              value={selectedDistrict}
+              onChange={(e) => {
+                setSelectedDistrict(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full py-2 px-2 border border-gray-300 rounded text-xs bg-white focus:outline-none"
+            >
+              <option value="ALL">সকল জেলা (৬টি পাইলট)</option>
+              <option value="ঢাকা">ঢাকা (১৫০)</option>
+              <option value="গাজীপুর">গাজীপুর (৮০)</option>
+              <option value="নারায়ণগঞ্জ">নারায়ণগঞ্জ (৭৫)</option>
+              <option value="চট্টগ্রাম">চট্টগ্রাম (৭৫)</option>
+              <option value="কুমিল্লা">কুমিল্লা (৬৫)</option>
+              <option value="টাঙ্গাইল">টাঙ্গাইল (৫৫)</option>
+            </select>
           </div>
 
           {/* Case Type Filter */}
           <div>
             <select
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
+              onChange={(e) => {
+                setSelectedCategory(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full py-2 px-2 border border-gray-300 rounded text-xs bg-white focus:outline-none"
             >
               <option value="ALL">সকল মামলার ধরন</option>
@@ -147,6 +253,7 @@ export const CasesListView: React.FC = () => {
               <option value="CIVIL">দেওয়ানি</option>
               <option value="LAND_PROPERTY">জমি ও সম্পত্তি</option>
               <option value="LABOUR">শ্রম</option>
+              <option value="OTHER">অন্যান্য / সাইবার</option>
             </select>
           </div>
 
@@ -154,7 +261,10 @@ export const CasesListView: React.FC = () => {
           <div>
             <select
               value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
+              onChange={(e) => {
+                setSelectedStatus(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full py-2 px-2 border border-gray-300 rounded text-xs bg-white focus:outline-none"
             >
               <option value="ALL">সকল মামলার অবস্থা</option>
@@ -167,18 +277,20 @@ export const CasesListView: React.FC = () => {
             </select>
           </div>
 
-          {/* Priority Filter */}
+          {/* SLA Filter */}
           <div>
             <select
-              value={selectedPriority}
-              onChange={(e) => setSelectedPriority(e.target.value)}
+              value={selectedSLA}
+              onChange={(e) => {
+                setSelectedSLA(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full py-2 px-2 border border-gray-300 rounded text-xs bg-white focus:outline-none"
             >
-              <option value="ALL">সকল অগ্রাধিকার</option>
-              <option value="VERY_HIGH">অতি উচ্চ</option>
-              <option value="HIGH">উচ্চ</option>
-              <option value="MEDIUM">মধ্যম</option>
-              <option value="LOW">সাধারণ</option>
+              <option value="ALL">সকল এসএলএ অবস্থা</option>
+              <option value="NORMAL">স্বাভাবিক (সময়সীমার মধ্যে)</option>
+              <option value="APPROACHING_RISK">ঝুঁকিপূর্ণ (৩ দিন বা কম)</option>
+              <option value="BREACHED">সময়সীমা অতিক্রান্ত (বিলম্বিত)</option>
             </select>
           </div>
         </div>
@@ -314,9 +426,27 @@ export const CasesListView: React.FC = () => {
         </div>
 
         {/* Pagination Footer */}
-        <div className="p-3 bg-gray-50 border-t border-gray-200 flex justify-between items-center text-xs text-gray-600">
-          <div>
-            পৃষ্ঠা {currentPage} এর {totalPages} (মোট {filteredCases.length} রেকর্ড)
+        <div className="p-3 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-gray-600">
+          <div className="flex items-center space-x-3">
+            <span>
+              পৃষ্ঠা {currentPage} এর {totalPages} (মোট {filteredCases.length} রেকর্ড)
+            </span>
+            <div className="flex items-center space-x-1">
+              <span className="text-[11px] text-gray-500">প্রতি পৃষ্ঠায়:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="border border-gray-300 rounded bg-white px-1.5 py-0.5 text-xs"
+              >
+                <option value={10}>১০</option>
+                <option value={12}>১২</option>
+                <option value={25}>২৫</option>
+                <option value={50}>৫০</option>
+              </select>
+            </div>
           </div>
           <div className="flex space-x-1.5">
             <button

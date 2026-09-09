@@ -78,10 +78,12 @@ export interface PriorityAssessment {
 export interface Applicant {
   id: string;
   name: string;
+  displayName?: string; // e.g. "ডেমো আবেদনকারী 001" or "Demo Applicant • Protected"
   nidMasked: string; // e.g. "*********1284"
   phoneMasked: string; // e.g. "017******84"
   gender: 'পুরুষ' | 'নারী' | 'অন্যান্য';
   age: number;
+  ageBand?: '১৮-২৫' | '২৬-৩৫' | '৩৬-৫০' | '৫১+' | 'নাবালক/কিশোর';
   monthlyIncome: number; // BDT
   occupation: string;
   villageWard: string;
@@ -95,19 +97,28 @@ export interface Applicant {
 export interface PanelLawyer {
   id: string;
   name: string;
+  displayName?: string;
   barRegNo: string; // e.g. "DH-BAR-2015-4821"
   phone: string;
   email: string;
   district: string;
   specialisations: CaseCategory[];
+  specializationNames?: string[];
   experienceYears: number;
   currentActiveCases: number;
   maxCaseLimit: number;
+  capacity?: number;
+  workloadPercentage?: number;
+  highPriorityCases?: number;
+  upcomingHearings?: number;
+  overdueTasks?: number;
   availability: 'AVAILABLE' | 'BUSY' | 'UNAVAILABLE';
+  status?: 'ACTIVE' | 'BUSY' | 'LEAVE';
   knownConflicts: string[]; // Names of clients / institutions / opposing parties with conflicts
   disposedCasesCount: number;
   successRatePercentage: number;
   address: string;
+  isDemoData?: boolean;
 }
 
 export interface TimelineEvent {
@@ -169,17 +180,19 @@ export interface CaseDocument {
 
 export interface LegalAidCase {
   id: string;
-  caseNumber: string; // e.g. "LA-2026-001284"
+  isDemoData?: boolean;
+  caseNumber: string; // e.g. "LA-DEMO-2026-001284"
   applicant: Applicant;
   category: CaseCategory;
   courtCaseNumber?: string; // Court registered number e.g. "নালিশী মামলা নং ৪১২/২০২৬"
   courtName: string;
+  courtType?: string;
   district: string;
   upazila: string;
   status: CaseStatus;
   priorityAssessment: PriorityAssessment;
   assignedOfficerName: string;
-  assignedLawyerId?: string;
+  assignedLawyerId?: string | null;
   assignedLawyerName?: string;
   assignedLawyerBarNo?: string;
   applicationDate: string;
@@ -194,10 +207,45 @@ export interface LegalAidCase {
   reliefSought: string;
   lastActivityDate: string;
   daysWithoutActivity: number; // For "stuck case" detection
+  daysSinceLastActivity?: number;
   mediationAttempted?: boolean;
   mediationOutcome?: string;
   disposalDate?: string;
   disposalReason?: string;
+
+  // Synthetic dataset structured schema fields
+  caseCategory?: string;
+  caseSubcategory?: string;
+  description?: string;
+  applicantName?: string;
+  applicantDisplayName?: string;
+  applicantGender?: 'পুরুষ' | 'নারী' | 'অন্যান্য';
+  applicantAgeBand?: string;
+  vulnerabilityFactors?: string[];
+  priorityLevel?: PriorityLevel;
+  riskScore?: number;
+  riskFactors?: string[];
+  filingStage?: string;
+  slaDeadline?: string;
+  slaStatus?: 'NORMAL' | 'APPROACHING_RISK' | 'BREACHED';
+  legalAidEligibility?: 'ELIGIBLE' | 'REVIEW_PENDING' | 'SPECIAL_APPROVAL';
+  mediationApplicable?: boolean;
+  securityClassification?: 'Highly Sensitive' | 'Confidential' | 'Official' | 'Standard';
+  documentCount?: number;
+  sensitiveDocumentCount?: number;
+  securityAlerts?: string[];
+  createdBy?: string;
+  updatedAt?: string;
+
+  // Domain-specific fields
+  landDispute?: boolean;
+  propertyType?: 'Agricultural' | 'Residential' | 'Commercial' | 'Inherited property' | 'Government/claimed public land';
+  cybercrimeType?: string;
+  digitalEvidenceAvailable?: boolean;
+  platformType?: string;
+  technicalRisk?: string;
+  privacyRisk?: string;
+  allegationStatus?: string;
 }
 
 export type AuditEventType =
@@ -243,15 +291,24 @@ export interface AuditLogEntry {
 export interface SecurityEvent {
   id: string;
   timestamp: string;
+  eventType?: string;
   severity: 'INFO' | 'WARNING' | 'CRITICAL';
   title: string;
   description: string;
   user: string;
   role: string;
   resourceId?: string;
+  caseId?: string;
+  actorType?: string;
+  actorId?: string;
+  result?: string;
+  reason?: string;
+  controlTriggered?: string;
+  status?: string;
   blocked: boolean;
   actionTaken: string;
   correlationId?: string;
+  isDemoData?: boolean;
 }
 
 export type VulnerabilitySeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
@@ -279,20 +336,26 @@ export interface VulnerabilityLifecycleStage {
 
 export interface VulnerabilityItem {
   id: string;
+  title?: string;
   titleBn: string;
   titleEn: string;
   severity: VulnerabilitySeverity;
   asset: string;
   status: VulnerabilityStatus;
   owner: string;
+  sla?: string;
   slaHours: number;
   slaRemainingHours: number;
   isSlaAtRisk?: boolean;
   description: string;
+  riskScore?: number;
+  lifecycleStage?: LifecycleStageKey;
   identifiedAt: string;
+  detectedAt?: string;
   remediationPlan: string;
   lifecycle: VulnerabilityLifecycleStage[];
   relatedIncidentId?: string;
+  isDemoData?: boolean;
 }
 
 export interface SecurityIncident {

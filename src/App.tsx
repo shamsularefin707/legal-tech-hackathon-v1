@@ -22,6 +22,7 @@ import { SecuritySimulationModal } from './components/SecuritySimulationModal';
 import { SecurityIncidentDetailModal } from './components/SecurityIncidentDetailModal';
 import { NikahnamaPreviewModal } from './components/NikahnamaPreviewModal';
 import { LoginModal } from './components/LoginModal';
+import { DemoDatasetPanel } from './components/DemoDatasetPanel';
 
 const AppContent: React.FC = () => {
   const { activeView, setActiveView } = useLegalAid();
@@ -63,6 +64,9 @@ const AppContent: React.FC = () => {
 
       {/* Government Login Modal */}
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+
+      {/* Synthetic Dataset Control & Audit Panel */}
+      <DemoDatasetPanel />
     </div>
   );
 };

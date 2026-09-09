@@ -21,20 +21,86 @@ export const ReportsView: React.FC = () => {
     window.print();
   };
 
+  const totalCasesCount = cases.length || 1;
+  const womenCount = cases.filter(
+    (c) => c.category === 'WOMEN_CHILD' || c.category === 'FAMILY'
+  ).length;
+  const landCount = cases.filter((c) => c.category === 'LAND_PROPERTY').length;
+  const criminalCount = cases.filter((c) => c.category === 'CRIMINAL').length;
+  const civilCount = cases.filter((c) => c.category === 'CIVIL').length;
+  const labourCount = cases.filter((c) => c.category === 'LABOUR').length;
+  const otherCount = cases.filter(
+    (c) =>
+      c.category === 'OTHER' ||
+      c.category === 'CONSUMER_RIGHTS' ||
+      c.category === 'INHERITANCE' ||
+      c.category === 'HUMAN_RIGHTS'
+  ).length;
+
   const categoryStats = [
-    { name: 'পারিবারিক', count: 48, percentage: 34 },
-    { name: 'নারী ও শিশু', count: 32, percentage: 22 },
-    { name: 'ফৌজদারি', count: 26, percentage: 18 },
-    { name: 'জমি ও সম্পত্তি', count: 20, percentage: 14 },
-    { name: 'শ্রম অধিকার', count: 11, percentage: 8 },
-    { name: 'অন্যান্য', count: 5, percentage: 4 },
+    {
+      name: 'নারী, শিশু ও পরিবার',
+      count: womenCount,
+      percentage: Math.round((womenCount / totalCasesCount) * 100),
+    },
+    {
+      name: 'জমি ও সম্পত্তি বিরোধ',
+      count: landCount,
+      percentage: Math.round((landCount / totalCasesCount) * 100),
+    },
+    {
+      name: 'ফৌজদারি মামলা',
+      count: criminalCount,
+      percentage: Math.round((criminalCount / totalCasesCount) * 100),
+    },
+    {
+      name: 'দেওয়ানি মোকদ্দমা',
+      count: civilCount,
+      percentage: Math.round((civilCount / totalCasesCount) * 100),
+    },
+    {
+      name: 'শ্রম ও কর্মসংস্থান',
+      count: labourCount,
+      percentage: Math.round((labourCount / totalCasesCount) * 100),
+    },
+    {
+      name: 'অন্যান্য (সাইবার, ক্ষতিপূরণ)',
+      count: otherCount,
+      percentage: Math.round((otherCount / totalCasesCount) * 100),
+    },
   ];
 
+  const inProgressCount = cases.filter(
+    (c) => c.status === 'IN_PROGRESS' || c.status === 'HEARING_ONGOING'
+  ).length;
+  const disposedCount = cases.filter((c) => c.status === 'DISPOSED').length;
+  const pendingLawyerCount = cases.filter(
+    (c) => c.status === 'PENDING_LAWYER_ASSIGNMENT'
+  ).length;
+  const mediationCount = cases.filter((c) => c.status === 'MEDIATION_ONGOING').length;
+  const slaCompliantCount = cases.filter((c) => c.slaStatus === 'NORMAL').length;
+
   const statusStats = [
-    { status: 'চলমান বিচারিক কার্যক্রম', count: 89, rate: '৬২.৬%' },
-    { status: 'নিষ্পত্তিকৃত মামলা', count: 35, rate: '২৪.৬%' },
-    { status: 'আইনজীবী নিয়োগ অপেক্ষমাণ', count: 12, rate: '৮.৫%' },
-    { status: 'বিকল্প বিরোধ নিষ্পত্তিতে সফল (ADR)', count: 6, rate: '৪.৩%' },
+    {
+      status: 'চলমান বিচারিক কার্যক্রম ও শুনানি',
+      count: inProgressCount,
+      rate: `${((inProgressCount / totalCasesCount) * 100).toFixed(1)}%`,
+    },
+    {
+      status: 'নিষ্পত্তিকৃত মামলা',
+      count: disposedCount,
+      rate: `${((disposedCount / totalCasesCount) * 100).toFixed(1)}%`,
+    },
+    {
+      status: 'আইনজীবী নিয়োগ অপেক্ষমাণ',
+      count: pendingLawyerCount,
+      rate: `${((pendingLawyerCount / totalCasesCount) * 100).toFixed(1)}%`,
+    },
+    {
+      status: 'বিকল্প বিরোধ নিষ্পত্তিতে মধ্যস্থতা (ADR)',
+      count: mediationCount,
+      rate: `${((mediationCount / totalCasesCount) * 100).toFixed(1)}%`,
+    },
   ];
 
   return (
@@ -44,20 +110,20 @@ export const ReportsView: React.FC = () => {
         <div>
           <div className="flex items-center space-x-2">
             <h2 className="text-lg font-bold text-gray-900">
-              জেলা আইনগত সহায়তা সমন্বিত পরিসংখ্যান ও প্রতিবেদন
+              আইনগত সহায়তা সমন্বিত পরিসংখ্যান ও প্রতিবেদন (ডেমো)
             </h2>
-            <span className="bg-blue-100 text-blue-900 text-[11px] font-semibold px-2 py-0.5 rounded border border-blue-300">
-              সরকারি বিচারিক রিটার্ন
+            <span className="bg-amber-100 text-blue-950 text-[11px] font-bold px-2 py-0.5 rounded border border-amber-300">
+              হ্যাকথন প্রোটোটাইপ • সিন্থেটিক ডেটাসেট
             </span>
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">
-            আইন ও বিচার বিভাগ এবং জাতীয় আইনগত সহায়তা প্রদান সংস্থার জন্য প্রস্তুতকৃত
+          <p className="text-xs text-gray-600 mt-0.5">
+            পাইলট জেলাভিত্তিক মামলা অগ্রগতি, সময়সীমা পরিপালন ও আইনজীবী কর্মভার বিশ্লেষণ
           </p>
         </div>
 
         <button
           onClick={handlePrint}
-          className="px-3.5 py-1.5 bg-[#172554] text-white rounded font-bold flex items-center space-x-2 hover:bg-blue-900 cursor-pointer"
+          className="px-3.5 py-1.5 bg-[#172554] text-white rounded font-bold flex items-center space-x-2 hover:bg-blue-900 cursor-pointer shadow-xs"
         >
           <Printer className="w-4 h-4" />
           <span>প্রিন্ট / পিডিএফ সংস্করণ প্রস্তুত</span>
@@ -68,18 +134,18 @@ export const ReportsView: React.FC = () => {
       <div className="bg-white border border-gray-300 p-6 rounded-sm shadow-xs space-y-5 print:border-0 print:p-0">
         {/* Official Header for Print (Section 25) */}
         <div className="text-center border-b-2 border-gray-800 pb-4 space-y-1">
-          <div className="text-xs font-bold text-gray-600">
-            গণপ্রজাতন্ত্রী বাংলাদেশ সরকার
+          <div className="inline-block bg-amber-100 text-amber-900 text-[11px] font-bold px-2.5 py-0.5 rounded border border-amber-300 mb-1">
+            ডেমো পরিবেশ • সম্পূর্ণ কাল্পনিক তথ্য • হ্যাকথন প্রোটোটাইপ
           </div>
           <h3 className="text-base font-bold text-gray-900">
-            জেলা আইনগত সহায়তা কার্যালয়, ঢাকা
+            জাতীয় আইনগত সহায়তা কার্যক্রম তদারকি প্ল্যাটফর্ম
           </h3>
           <div className="text-xs text-gray-700 font-medium">
-            মাসিক বিচারিক অগ্রগতি, মামলা নিষ্পত্তি ও আইনজীবী কর্মভার প্রতিবেদন
+            পাইলট জেলাসমূহের বিচারিক অগ্রগতি ও প্যানেল আইনজীবী কর্মভার প্রতিবেদন
           </div>
           <div className="flex justify-between items-center text-[11px] text-gray-600 pt-2 font-mono">
             <span>প্রতিবেদন প্রস্তুতের তারিখ: ০৯ সেপ্টেম্বর ২০২৬</span>
-            <span>স্মারক নং: ডিএলএও/ঢাকা/২০২৬/৮১৪</span>
+            <span>নমুনা স্মারক: ডিএলএও/ডেমো/২০২৬/৮১৪</span>
             <span>প্রতিবেদন প্রস্তুতকারী: {currentUser.name} ({currentUser.designation})</span>
           </div>
         </div>
@@ -87,20 +153,24 @@ export const ReportsView: React.FC = () => {
         {/* Aggregate Summary Metrics */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center border-b pb-4">
           <div className="border p-2.5 rounded bg-gray-50/50">
-            <div className="text-[11px] text-gray-500">মোট নথিভুক্ত আবেদন</div>
-            <div className="text-lg font-bold text-gray-900 mt-0.5">১৪২টি</div>
+            <div className="text-[11px] text-gray-500">মোট সিন্থেটিক আবেদন</div>
+            <div className="text-lg font-bold text-gray-900 mt-0.5">{totalCasesCount}টি</div>
           </div>
           <div className="border p-2.5 rounded bg-gray-50/50">
             <div className="text-[11px] text-gray-500">নিষ্পত্তির হার (Disposal Rate)</div>
-            <div className="text-lg font-bold text-emerald-800 mt-0.5">৭৪.২%</div>
+            <div className="text-lg font-bold text-emerald-800 mt-0.5">
+              {((disposedCount / totalCasesCount) * 100).toFixed(1)}%
+            </div>
           </div>
           <div className="border p-2.5 rounded bg-gray-50/50">
-            <div className="text-[11px] text-gray-500">গড় নিষ্পত্তির সময়কাল</div>
-            <div className="text-lg font-bold text-[#172554] mt-0.5">৫.৪ মাস</div>
+            <div className="text-[11px] text-gray-500">অনুমোদিত আইনজীবী সংখ্যা</div>
+            <div className="text-lg font-bold text-[#172554] mt-0.5">{lawyers.length} জন</div>
           </div>
           <div className="border p-2.5 rounded bg-gray-50/50">
             <div className="text-[11px] text-gray-500">সময়সীমা পরিপালন হার</div>
-            <div className="text-lg font-bold text-blue-900 mt-0.5">৮৯.০%</div>
+            <div className="text-lg font-bold text-blue-900 mt-0.5">
+              {((slaCompliantCount / totalCasesCount) * 100).toFixed(1)}%
+            </div>
           </div>
         </div>
 
@@ -129,10 +199,35 @@ export const ReportsView: React.FC = () => {
           </div>
         </div>
 
-        {/* Section 2: মামলার বর্তমান অবস্থা */}
+        {/* Section 2: পাইলট জেলাভিত্তিক বণ্টন */}
         <div className="space-y-2.5 pt-2">
           <h4 className="font-bold text-gray-900 text-xs uppercase tracking-wider border-b pb-1">
-            ২. মামলার পর্যায়ক্রমিক বিচারিক অবস্থা
+            ২. ৬টি পাইলট জেলাভিত্তিক মামলার ভৌগোলিক বণ্টন
+          </h4>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            {[
+              { district: 'ঢাকা', actual: cases.filter((c) => c.district === 'ঢাকা').length },
+              { district: 'গাজীপুর', actual: cases.filter((c) => c.district === 'গাজীপুর').length },
+              { district: 'নারায়ণগঞ্জ', actual: cases.filter((c) => c.district === 'নারায়ণগঞ্জ').length },
+              { district: 'চট্টগ্রাম', actual: cases.filter((c) => c.district === 'চট্টগ্রাম').length },
+              { district: 'কুমিল্লা', actual: cases.filter((c) => c.district === 'কুমিল্লা').length },
+              { district: 'টাঙ্গাইল', actual: cases.filter((c) => c.district === 'টাঙ্গাইল').length },
+            ].map((d, i) => (
+              <div key={i} className="border border-gray-200 p-2 rounded bg-gray-50/50 text-center">
+                <div className="text-[11px] font-bold text-gray-900">{d.district}</div>
+                <div className="text-base font-bold text-[#172554] mt-0.5">{d.actual}টি</div>
+                <div className="text-[10px] text-gray-500 font-mono">
+                  {((d.actual / totalCasesCount) * 100).toFixed(1)}%
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Section 3: মামলার বর্তমান অবস্থা */}
+        <div className="space-y-2.5 pt-2">
+          <h4 className="font-bold text-gray-900 text-xs uppercase tracking-wider border-b pb-1">
+            ৩. মামলার পর্যায়ক্রমিক বিচারিক অবস্থা
           </h4>
           <table className="w-full text-left text-xs border border-gray-200 border-collapse">
             <thead>

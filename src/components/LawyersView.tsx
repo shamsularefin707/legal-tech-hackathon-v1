@@ -25,6 +25,17 @@ export const LawyersView: React.FC = () => {
   const [selectedSpecialisation, setSelectedSpecialisation] = useState('ALL');
   const [activeLawyerProfile, setActiveLawyerProfile] = useState<PanelLawyer | null>(null);
 
+  const underCapacityCount = lawyers.filter((l) => l.currentActiveCases / l.maxCaseLimit < 0.6).length;
+  const balancedCount = lawyers.filter((l) => {
+    const ratio = l.currentActiveCases / l.maxCaseLimit;
+    return ratio >= 0.6 && ratio < 0.85;
+  }).length;
+  const highCapacityCount = lawyers.filter((l) => {
+    const ratio = l.currentActiveCases / l.maxCaseLimit;
+    return ratio >= 0.85 && ratio < 1.0;
+  }).length;
+  const overCapacityCount = lawyers.filter((l) => l.currentActiveCases >= l.maxCaseLimit).length;
+
   const filteredLawyers = lawyers.filter((l) => {
     const matchesSearch =
       l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -75,6 +86,33 @@ export const LawyersView: React.FC = () => {
         </div>
       </div>
 
+      {/* Workload Capacity Distribution Summary (LADCS Section 11 & 14) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="bg-white border border-gray-300 p-2.5 rounded">
+          <div className="text-gray-500 text-[10px]">স্বাভাবিক কর্মভার (&lt;৬০%)</div>
+          <div className="text-base font-bold text-blue-950 mt-0.5">{underCapacityCount} জন</div>
+          <div className="text-[10px] text-emerald-700">নুতন মামলা গ্রহণে সম্পূর্ণ প্রস্তুত</div>
+        </div>
+
+        <div className="bg-white border border-gray-300 p-2.5 rounded">
+          <div className="text-gray-500 text-[10px]">ভারসাম্যপূর্ণ কর্মভার (৬০-৮৪%)</div>
+          <div className="text-base font-bold text-gray-900 mt-0.5">{balancedCount} জন</div>
+          <div className="text-[10px] text-blue-700">অনুকূল কার্যক্ষমতা বজায় আছে</div>
+        </div>
+
+        <div className="bg-white border border-amber-300 bg-amber-50/30 p-2.5 rounded">
+          <div className="text-amber-800 text-[10px]">উচ্চ কর্মভার (৮৫-৯৯%)</div>
+          <div className="text-base font-bold text-amber-950 mt-0.5">{highCapacityCount} জন</div>
+          <div className="text-[10px] text-amber-700">সীমার কাছাকাছি সতর্ক সংকেত</div>
+        </div>
+
+        <div className="bg-white border border-red-300 bg-red-50/40 p-2.5 rounded">
+          <div className="text-red-700 text-[10px]">সীমা অতিক্রান্ত (১০০%+)</div>
+          <div className="text-base font-bold text-red-950 mt-0.5">{overCapacityCount} জন</div>
+          <div className="text-[10px] text-red-700 font-bold">নতুন মামলা বরাদ্দ অবরুদ্ধ</div>
+        </div>
+      </div>
+
       {/* Filter & Search Bar */}
       <div className="bg-white border border-gray-300 p-3 rounded-sm grid grid-cols-1 sm:grid-cols-3 gap-2">
         <div className="relative">
@@ -94,9 +132,13 @@ export const LawyersView: React.FC = () => {
             onChange={(e) => setSelectedDistrict(e.target.value)}
             className="w-full p-1.5 border border-gray-300 rounded text-xs bg-white"
           >
-            <option value="ALL">সকল জেলা</option>
+            <option value="ALL">সকল জেলা (৬টি পাইলট)</option>
             <option value="ঢাকা">ঢাকা</option>
             <option value="গাজীপুর">গাজীপুর</option>
+            <option value="নারায়ণগঞ্জ">নারায়ণগঞ্জ</option>
+            <option value="চট্টগ্রাম">চট্টগ্রাম</option>
+            <option value="কুমিল্লা">কুমিল্লা</option>
+            <option value="টাঙ্গাইল">টাঙ্গাইল</option>
           </select>
         </div>
 

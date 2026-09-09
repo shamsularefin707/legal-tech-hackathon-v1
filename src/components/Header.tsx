@@ -10,6 +10,7 @@ import {
   ShieldAlert,
   ChevronDown,
   Lock,
+  Database,
 } from 'lucide-react';
 import { useLegalAid } from '../context/LegalAidContext';
 
@@ -23,10 +24,12 @@ export const Header: React.FC<HeaderProps> = ({ onOpenLogin }) => {
     setCurrentUser,
     users,
     notifications,
+    cases,
     setActiveView,
     setSelectedCaseId,
     triggerUnauthorizedCaseAccessDemo,
     triggerBulkDownloadAbuseDemo,
+    setIsDemoDataPanelOpen,
   } = useLegalAid();
 
   const [showNotifications, setShowNotifications] = useState(false);
@@ -42,16 +45,16 @@ export const Header: React.FC<HeaderProps> = ({ onOpenLogin }) => {
         <div className="flex items-center space-x-2">
           <span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
           <span className="font-medium tracking-wide">
-            গণপ্রজাতন্ত্রী বাংলাদেশ সরকার | আইন ও বিচার বিভাগ
+            গণপ্রজাতন্ত্রী বাংলাদেশ সরকার | আইন ও বিচার বিভাগ (ডেমো প্রোটোটাইপ)
           </span>
           <span className="text-gray-300">|</span>
           <span className="text-gray-200">জাতীয় আইনগত সহায়তা কার্যক্রম</span>
         </div>
-        <div className="flex items-center space-x-4">
-          <span className="bg-blue-900/90 px-2 py-0.5 border border-blue-700 text-amber-200 rounded text-[11px] font-semibold">
-            ডেমো পরিবেশ
+        <div className="flex items-center space-x-3">
+          <span className="bg-amber-400 text-blue-950 px-2.5 py-0.5 rounded text-[11px] font-bold shadow-xs">
+            ডেমো পরিবেশ • সম্পূর্ণ কাল্পনিক তথ্য
           </span>
-          <span className="text-gray-300 text-[11px]">
+          <span className="text-gray-300 text-[11px] hidden md:inline">
             সার্ভার সময়: ১১ সেপ্টেম্বর ২০২৬, সকাল ১০:১৫
           </span>
         </div>
@@ -91,8 +94,19 @@ export const Header: React.FC<HeaderProps> = ({ onOpenLogin }) => {
           </div>
         </div>
 
-        {/* Right: Security Sandbox Tools, Notifications, User Info */}
-        <div className="flex items-center space-x-3">
+        {/* Right: Synthetic Dataset Controls, Security Sandbox Tools, Notifications, User Info */}
+        <div className="flex items-center space-x-2.5">
+          {/* Synthetic Dataset Controls Trigger */}
+          <button
+            id="btn-demo-dataset"
+            onClick={() => setIsDemoDataPanelOpen(true)}
+            className="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-bold text-[#172554] bg-blue-50 hover:bg-blue-100 border border-blue-300 rounded cursor-pointer transition-colors shadow-xs"
+            title="সিন্থেটিক ডেটাসেট নিয়ন্ত্রণ ও পুনর্জেনারেট প্যানেল (৫০০ কেস, ২৫ আইনজীবী)"
+          >
+            <Database className="w-3.5 h-3.5 text-blue-800" />
+            <span className="hidden sm:inline">সিন্থেটিক ডেটা ({cases.length})</span>
+          </button>
+
           {/* Quick Demo Scenario Switcher (Crucial for Section 41 & 42 judging) */}
           <div className="relative">
             <button
