@@ -17,6 +17,7 @@ import {
   Play,
   CheckCircle2,
   Lock,
+  ChevronRight,
 } from 'lucide-react';
 import { useLegalAid } from '../context/LegalAidContext';
 import { calculateDashboardMetrics } from '../services/dashboardMetrics';
@@ -33,6 +34,8 @@ export const DashboardView: React.FC = () => {
     atRiskDeadlinesCount,
     stuckCases,
     runSecuritySimulation,
+    consistencyAudit,
+    setSelectedConsistencyCategory,
   } = useLegalAid();
 
   // Dynamic Metrics derived using the service engine
@@ -348,6 +351,84 @@ export const DashboardView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Dataset Consistency & Chronology Audit Module */}
+      {consistencyAudit && consistencyAudit.totalIssuesCount > 0 && (
+        <div className="bg-white border-2 border-red-300 rounded-sm shadow-xs overflow-hidden">
+          <div className="bg-red-50/80 p-3.5 border-b border-red-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <div className="flex items-center space-x-2.5">
+              <div className="w-8 h-8 rounded bg-red-800 text-white flex items-center justify-center font-bold text-sm shrink-0">
+                <AlertTriangle className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h3 className="font-bold text-sm text-red-950">
+                    ডেটাসেট সঙ্গতি ও কালানুক্রমিক পরীক্ষণ (Data Consistency & Quality Audit)
+                  </h3>
+                  <span className="bg-red-200 text-red-900 text-[10px] font-bold px-2 py-0.5 rounded border border-red-300">
+                    {consistencyAudit.affectedCasesCount}টি মামলায় অসংগতি
+                  </span>
+                </div>
+                <p className="text-[11px] text-red-800 mt-0.5">
+                  সতর্কতা: সিস্টেমের মূল ডেটাসেটে সংরক্ষিত উৎস মান অপরিবর্তিত রাখা হয়েছে। উৎস নথিপত্র পর্যালোচনা সাপেক্ষে ব্যবস্থা গ্রহণীয়।
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 shrink-0">
+              <button
+                onClick={() => {
+                  setSelectedConsistencyCategory('ALL');
+                  setActiveView('cases');
+                }}
+                className="px-3 py-1.5 bg-red-800 hover:bg-red-900 text-white rounded text-xs font-bold flex items-center space-x-1 cursor-pointer transition-colors"
+              >
+                <span>অসংগতিপূর্ণ মামলার তালিকা ({consistencyAudit.affectedCasesCount})</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="p-3.5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            {consistencyAudit.categorySummaries.map((cat) => (
+              <div
+                key={cat.category}
+                onClick={() => {
+                  if (cat.count > 0) {
+                    setSelectedConsistencyCategory(cat.category);
+                    setActiveView('cases');
+                  }
+                }}
+                className={`p-2.5 rounded border transition-colors ${
+                  cat.count > 0
+                    ? 'bg-red-50/40 border-red-200 hover:bg-red-100/70 cursor-pointer'
+                    : 'bg-gray-50/50 border-gray-200 opacity-60'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-xs text-gray-900">{cat.categoryBn}</span>
+                  <span
+                    className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                      cat.count > 0
+                        ? cat.severity === 'CRITICAL'
+                          ? 'bg-red-600 text-white'
+                          : 'bg-amber-200 text-amber-900'
+                        : 'bg-gray-200 text-gray-600'
+                    }`}
+                  >
+                    {cat.count}টি
+                  </span>
+                </div>
+                <div className="text-[10px] text-gray-600 mt-1 line-clamp-2">{cat.problem}</div>
+                <div className="mt-1.5 pt-1 border-t border-gray-100 flex items-center justify-between text-[10px]">
+                  <span className="text-gray-500 font-mono">{cat.recommendedAction}</span>
+                  {cat.count > 0 && <span className="text-red-800 font-bold hover:underline">ফিল্টার →</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Main Grid: 2 Columns */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

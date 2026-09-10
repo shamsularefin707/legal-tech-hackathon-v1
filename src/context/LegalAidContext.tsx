@@ -30,6 +30,11 @@ import {
 import { createAuditTrailEntry } from '../services/auditService';
 import { advanceVulnerabilityStage } from '../services/vulnerabilityLifecycle';
 import { DEMO_SNAPSHOT_DATE, getDemoTimestampString } from '../utils/dateUtils';
+import {
+  auditDatasetConsistency,
+  ConsistencyCategory,
+  DatasetConsistencyAuditResult,
+} from '../services/dataConsistencyService';
 
 export interface NotificationItem {
   id: string;
@@ -116,9 +121,14 @@ interface LegalAidContextType {
   simulateDownloadDocument: (caseId: string, docId: string) => { success: boolean; message: string };
   requestDataExport: (exportType: string, district: string, reason: string) => { success: boolean; message: string; exportId?: string };
   
-  // Computed stats
+  // Computed stats & Data Quality Consistency
   stuckCases: LegalAidCase[];
   atRiskDeadlinesCount: number;
+  consistencyAudit: DatasetConsistencyAuditResult;
+  selectedConsistencyCategory: ConsistencyCategory | 'ALL';
+  setSelectedConsistencyCategory: (cat: ConsistencyCategory | 'ALL') => void;
+  isMobileMenuOpen: boolean;
+  setIsMobileMenuOpen: (open: boolean) => void;
 }
 
 const LegalAidContext = createContext<LegalAidContextType | undefined>(undefined);
@@ -141,12 +151,18 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>('inc-42');
   const [activeView, setActiveView] = useState<string>('dashboard');
 
-  // Modals state
+  // Modals state & Consistency Filters
+  const [selectedConsistencyCategory, setSelectedConsistencyCategory] = useState<ConsistencyCategory | 'ALL'>('ALL');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
   const [isNikahnamaPreviewOpen, setIsNikahnamaPreviewOpen] = useState(false);
   const [isSimulationModalOpen, setIsSimulationModalOpen] = useState(false);
   const [isDemoDataPanelOpen, setIsDemoDataPanelOpen] = useState(false);
   const [isNewCaseModalOpen, setIsNewCaseModalOpen] = useState(false);
+
+  const consistencyAudit = useMemo(() => {
+    return auditDatasetConsistency(cases, lawyers);
+  }, [cases, lawyers]);
 
   const addNewCase = (newCase: LegalAidCase) => {
     setCases((prev) => [newCase, ...prev]);
@@ -1034,6 +1050,11 @@ export const LegalAidProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         requestDataExport,
         stuckCases,
         atRiskDeadlinesCount,
+        consistencyAudit,
+        selectedConsistencyCategory,
+        setSelectedConsistencyCategory,
+        isMobileMenuOpen,
+        setIsMobileMenuOpen,
       }}
     >
       {children}

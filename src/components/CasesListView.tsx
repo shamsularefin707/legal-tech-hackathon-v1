@@ -9,13 +9,23 @@ import {
   ArrowUpDown,
   FileText,
   AlertCircle,
+  AlertTriangle,
   CheckCircle,
+  X,
 } from 'lucide-react';
 import { useLegalAid } from '../context/LegalAidContext';
 import { LegalAidCase, CaseCategory, CaseStatus, PriorityLevel } from '../types/legalAid';
 
 export const CasesListView: React.FC = () => {
-  const { cases, setSelectedCaseId, setActiveView, checkObjectAccess } = useLegalAid();
+  const {
+    cases,
+    setSelectedCaseId,
+    setActiveView,
+    checkObjectAccess,
+    consistencyAudit,
+    selectedConsistencyCategory,
+    setSelectedConsistencyCategory,
+  } = useLegalAid();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
@@ -52,9 +62,33 @@ export const CasesListView: React.FC = () => {
         (selectedSLA === 'APPROACHING_RISK' && c.slaStatus === 'APPROACHING_RISK') ||
         (selectedSLA === 'NORMAL' && c.slaStatus === 'NORMAL');
 
-      return matchesSearch && matchesCategory && matchesStatus && matchesPriority && matchesDistrict && matchesSLA;
+      const matchesConsistency =
+        selectedConsistencyCategory === 'ALL' ||
+        (consistencyAudit?.caseIssuesMap.get(c.id)?.some(
+          (issue) => issue.category === selectedConsistencyCategory
+        ) ?? false);
+
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesStatus &&
+        matchesPriority &&
+        matchesDistrict &&
+        matchesSLA &&
+        matchesConsistency
+      );
     });
-  }, [cases, searchQuery, selectedCategory, selectedStatus, selectedPriority, selectedDistrict, selectedSLA]);
+  }, [
+    cases,
+    searchQuery,
+    selectedCategory,
+    selectedStatus,
+    selectedPriority,
+    selectedDistrict,
+    selectedSLA,
+    selectedConsistencyCategory,
+    consistencyAudit,
+  ]);
 
   const totalPages = Math.ceil(filteredCases.length / itemsPerPage) || 1;
   const paginatedCases = filteredCases.slice(
@@ -198,7 +232,50 @@ export const CasesListView: React.FC = () => {
           >
             জমি ও সম্পত্তি ({cases.filter(c => c.category === 'LAND_PROPERTY').length})
           </button>
+
+          {consistencyAudit && consistencyAudit.totalIssuesCount > 0 && (
+            <button
+              onClick={() => {
+                setSelectedConsistencyCategory(
+                  selectedConsistencyCategory === 'ALL' ? 'CHRONOLOGY_CONFLICT' : 'ALL'
+                );
+                setCurrentPage(1);
+              }}
+              className={`px-2 py-0.5 rounded cursor-pointer ${
+                selectedConsistencyCategory !== 'ALL'
+                  ? 'bg-red-800 text-white font-bold'
+                  : 'bg-red-50 text-red-900 border border-red-300 hover:bg-red-100'
+              }`}
+            >
+              কালানুক্রমিক ও তথ্য অসংগতি ({consistencyAudit.affectedCasesCount})
+            </button>
+          )}
         </div>
+
+        {/* Active Data Consistency Filter Alert Banner */}
+        {selectedConsistencyCategory !== 'ALL' && (
+          <div className="bg-red-50 border border-red-300 p-2.5 rounded flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+              <span className="font-bold text-red-950">
+                তথ্যগত অসংগতি ফিল্টার সক্রিয়:
+              </span>
+              <span className="bg-red-200 text-red-900 font-bold px-2 py-0.5 rounded text-[11px]">
+                {consistencyAudit?.categorySummaries.find(s => s.category === selectedConsistencyCategory)?.categoryLabel || selectedConsistencyCategory} ({filteredCases.length}টি মামলা চিহ্নিত)
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                setSelectedConsistencyCategory('ALL');
+                setCurrentPage(1);
+              }}
+              className="px-2.5 py-1 bg-white border border-red-300 text-red-900 hover:bg-red-100 rounded text-xs font-bold flex items-center space-x-1 cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>ফিল্টার মুছুন</span>
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
           {/* Search */}
@@ -335,9 +412,31 @@ export const CasesListView: React.FC = () => {
                     >
                       <td className="py-2.5 px-3 font-semibold text-gray-900 whitespace-nowrap">
                         <div className="text-[#172554] font-bold">{c.caseNumber}</div>
-                        <div className="text-[10px] text-gray-500 truncate max-w-[120px]">
+                        <div className="text-[10px] text-gray-500 truncate max-w-[140px]">
                           {c.courtName}
                         </div>
+                        {consistencyAudit && consistencyAudit.caseIssuesMap.get(c.id)?.length ? (
+                          <div className="flex flex-col gap-0.5 mt-1">
+                            {consistencyAudit.caseIssuesMap.get(c.id)?.some(i => i.category === 'CHRONOLOGY_CONFLICT') && (
+                              <span
+                                className="inline-flex items-center bg-red-100 text-red-900 border border-red-300 text-[9px] font-bold px-1.5 py-0.2 rounded w-fit"
+                                title="কালানুক্রমিক অসংগতি: শুনানির তারিখ দাখিলের পূর্বে"
+                              >
+                                <AlertTriangle className="w-2.5 h-2.5 text-red-700 mr-0.5 shrink-0" />
+                                কালানুক্রমিক অসংগতি
+                              </span>
+                            )}
+                            {consistencyAudit.caseIssuesMap.get(c.id)?.filter(i => i.category !== 'CHRONOLOGY_CONFLICT').map(i => (
+                              <span
+                                key={i.id}
+                                className="inline-flex items-center bg-amber-100 text-amber-900 border border-amber-300 text-[9px] font-medium px-1.5 py-0.2 rounded w-fit"
+                                title={i.details || i.description}
+                              >
+                                {i.categoryLabel}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
                       </td>
                       <td className="py-2.5 px-3 text-gray-800">
                         <div className="font-semibold">{c.applicant.name}</div>

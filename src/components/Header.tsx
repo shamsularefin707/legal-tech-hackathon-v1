@@ -12,6 +12,8 @@ import {
   Lock,
   Database,
   PlusCircle,
+  Menu,
+  X,
 } from 'lucide-react';
 import { useLegalAid } from '../context/LegalAidContext';
 
@@ -32,6 +34,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenLogin }) => {
     triggerBulkDownloadAbuseDemo,
     setIsDemoDataPanelOpen,
     setIsNewCaseModalOpen,
+    isMobileMenuOpen,
+    setIsMobileMenuOpen,
   } = useLegalAid();
 
   const [showNotifications, setShowNotifications] = useState(false);
@@ -65,7 +69,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenLogin }) => {
       {/* Main Bar */}
       <div className="px-4 py-2.5 flex items-center justify-between">
         {/* Left: Emblem Placeholder & Institution Title */}
-        <div className="flex items-center space-x-3.5">
+        <div className="flex items-center space-x-2 sm:space-x-3.5">
+          {/* Mobile drawer toggle */}
+          <button
+            id="btn-header-mobile-toggle"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="lg:hidden p-2 -ml-1 text-[#172554] hover:bg-slate-100 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
+            aria-label="মেনু খুলুন বা বন্ধ করুন"
+          >
+            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+
           {/* Institutional Scales Placeholder */}
           <div className="w-10 h-10 rounded-sm border border-gray-400 bg-slate-100 flex items-center justify-center p-1.5 shadow-xs shrink-0 text-[#172554]">
             <svg

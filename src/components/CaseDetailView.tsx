@@ -42,6 +42,7 @@ export const CaseDetailView: React.FC = () => {
     addDocumentToCase,
     simulateDownloadDocument,
     auditLogs,
+    consistencyAudit,
   } = useLegalAid();
 
   const [activeTab, setActiveTab] = useState<string>('summary'); // Default to summary & lifecycle
@@ -70,6 +71,7 @@ export const CaseDetailView: React.FC = () => {
 
   const currentCase = cases.find((c) => c.id === selectedCaseId) || cases[0];
   const accessCheck = checkObjectAccess(currentCase);
+  const caseConsistencyIssues = consistencyAudit?.caseIssuesMap.get(currentCase.id) || [];
 
   if (!accessCheck.allowed) {
     return (
@@ -259,6 +261,50 @@ export const CaseDetailView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* PRIORITY 1: Chronology and Data Quality Conflict Warning Banner */}
+      {caseConsistencyIssues.length > 0 && (
+        <div className="bg-red-50 border-2 border-red-400 p-4 rounded-sm shadow-xs space-y-3">
+          <div className="flex items-center space-x-2 text-red-950 font-bold text-sm border-b border-red-200 pb-2">
+            <AlertTriangle className="w-5 h-5 text-red-700 shrink-0" />
+            <span>কালানুক্রমিক ও তথ্যগত অসংগতি সতর্কতা (Data Consistency Conflict Notice)</span>
+            <span className="bg-red-200 text-red-900 text-[10px] px-2 py-0.5 rounded font-mono font-bold">
+              {caseConsistencyIssues.length}টি অসঙ্গতি চিহ্নিত
+            </span>
+          </div>
+          <div className="space-y-2">
+            {caseConsistencyIssues.map((issue) => (
+              <div key={issue.id} className="bg-white border border-red-300 p-3 rounded text-xs space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-red-950 bg-red-100 border border-red-300 px-2 py-0.5 rounded text-[11px]">
+                    {issue.categoryLabel}
+                  </span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                    issue.severity === 'CRITICAL' ? 'bg-red-600 text-white' : 'bg-amber-100 text-amber-900 border border-amber-300'
+                  }`}>
+                    {issue.severity === 'CRITICAL' ? 'জরুরি (Critical)' : 'সতর্কতা (Warning)'}
+                  </span>
+                </div>
+                <div className="text-gray-900 font-semibold">
+                  {issue.description}
+                </div>
+                {issue.details && (
+                  <div className="bg-red-50/70 p-2 rounded text-[11px] text-gray-800 font-mono border border-red-100 leading-relaxed whitespace-pre-line">
+                    {issue.details}
+                  </div>
+                )}
+                <div className="pt-1 border-t border-gray-100 flex items-start space-x-1.5 text-[11px]">
+                  <span className="font-bold text-blue-900 shrink-0">সুপারিশকৃত পদক্ষেপ:</span>
+                  <span className="text-gray-700">{issue.recommendedAction}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-red-800 italic">
+            * সতর্কতা: তথ্যগত অসংগতির ক্ষেত্রে সিস্টেম উৎস তারিখ স্বয়ংক্রিয়ভাবে পরিবর্তন করে না। মূল নথিপত্র পর্যালোচনা করে সঠিকতা নিশ্চিত করুন।
+          </p>
+        </div>
+      )}
 
       {/* Formal Case Lifecycle Stepper (NALSA / National Legal Aid 7-Stage Pipeline) */}
       <div className="bg-white border border-gray-300 p-3.5 rounded-sm shadow-2xs">

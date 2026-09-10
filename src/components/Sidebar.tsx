@@ -19,6 +19,7 @@ import {
   Scale,
   PlusCircle,
   Shield,
+  X,
 } from 'lucide-react';
 import { useLegalAid } from '../context/LegalAidContext';
 import { hasPermission } from '../services/rbacService';
@@ -32,6 +33,8 @@ export const Sidebar: React.FC = () => {
     cases,
     currentUser,
     setIsNewCaseModalOpen,
+    isMobileMenuOpen,
+    setIsMobileMenuOpen,
   } = useLegalAid();
 
   const pendingLawyerCasesCount = cases.filter(
@@ -88,30 +91,44 @@ export const Sidebar: React.FC = () => {
     { id: 'users', label: 'ব্যবহারকারী ও পদবি', icon: Users },
   ];
 
-  return (
-    <aside className="w-64 bg-white border-r border-gray-300 flex flex-col shrink-0 min-h-[calc(100vh-80px)] no-print">
+  const renderNavContent = (isDrawer = false) => (
+    <div className="flex flex-col h-full">
       {/* Office Header */}
-      <div className="p-3 border-b border-gray-200 bg-gray-50/70">
-        <div className="flex items-center justify-between text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-          <span>কার্যক্রম উইন্ডো</span>
-          <span className="text-[10px] text-blue-900 bg-blue-100 px-1.5 py-0.2 rounded font-semibold">
-            {currentUser.district}
-          </span>
+      <div className="p-3 border-b border-gray-200 bg-gray-50/70 flex items-center justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center space-x-1 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+            <span>কার্যক্রম উইন্ডো</span>
+            <span className="text-[10px] text-blue-900 bg-blue-100 px-1.5 py-0.2 rounded font-semibold">
+              {currentUser.district}
+            </span>
+          </div>
+          <div className="text-xs font-semibold text-gray-900 mt-0.5 truncate">
+            {currentUser.name}
+          </div>
+          <div className="text-[10px] text-gray-600 truncate font-mono">
+            {currentUser.role}
+          </div>
         </div>
-        <div className="text-xs font-semibold text-gray-900 mt-0.5 truncate">
-          {currentUser.name}
-        </div>
-        <div className="text-[10px] text-gray-600 truncate font-mono">
-          {currentUser.role}
-        </div>
+        {isDrawer && (
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="p-1.5 rounded text-gray-500 hover:bg-gray-200 cursor-pointer"
+            aria-label="বন্ধ করুন"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* New Application Quick Action for Permitted Roles */}
       {hasPermission(currentUser, 'CREATE_APPLICATION') && (
         <div className="p-2 border-b border-gray-200 bg-emerald-50/40">
           <button
-            id="sidebar-new-case-btn"
-            onClick={() => setIsNewCaseModalOpen(true)}
+            id={isDrawer ? 'sidebar-drawer-new-case-btn' : 'sidebar-new-case-btn'}
+            onClick={() => {
+              setIsNewCaseModalOpen(true);
+              if (isDrawer) setIsMobileMenuOpen(false);
+            }}
             className="w-full flex items-center justify-center space-x-2 px-3 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded font-bold text-xs shadow-xs transition-colors cursor-pointer"
           >
             <PlusCircle className="w-3.5 h-3.5 text-emerald-100" />
@@ -131,13 +148,14 @@ export const Sidebar: React.FC = () => {
           return (
             <button
               key={item.id}
-              id={`nav-${item.id}`}
+              id={`${isDrawer ? 'drawer-' : ''}nav-${item.id}`}
               onClick={() => {
                 if (item.id === 'case-1284') {
                   setActiveView('case-detail');
                 } else {
                   setActiveView(item.id);
                 }
+                if (isDrawer) setIsMobileMenuOpen(false);
               }}
               className={`w-full flex items-center justify-between px-3 py-2 text-xs rounded transition-colors text-left font-medium cursor-pointer ${
                 isActive
@@ -189,6 +207,30 @@ export const Sidebar: React.FC = () => {
           কাল্পনিক ডেটা • হ্যাকাথন প্রদর্শনী
         </div>
       </div>
-    </aside>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Persistent Sidebar */}
+      <aside className="hidden lg:flex w-64 bg-white border-r border-gray-300 flex-col shrink-0 min-h-[calc(100vh-80px)] no-print">
+        {renderNavContent(false)}
+      </aside>
+
+      {/* Mobile Drawer Overlay & Sidebar */}
+      {isMobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          {/* Slide-out Drawer */}
+          <div className="relative w-72 max-w-[85vw] bg-white h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-200">
+            {renderNavContent(true)}
+          </div>
+        </div>
+      )}
+    </>
   );
 };

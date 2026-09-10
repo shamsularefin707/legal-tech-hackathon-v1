@@ -179,7 +179,7 @@ export function generateSyntheticCases(
     const status = shuffledStatuses[globalIndex - 1];
 
     // Pick an upazila belonging strictly to this district
-    const upazila = rng.pick(distInfo.upazilas);
+    let upazila = rng.pick(distInfo.upazilas);
 
     // Gender assignment aligned with category
     const isFemaleApplicant =
@@ -189,17 +189,17 @@ export function generateSyntheticCases(
 
     const firstName = isFemaleApplicant ? rng.pick(FEMALE_FIRST_NAMES) : rng.pick(MALE_FIRST_NAMES);
     const lastName = rng.pick(LAST_NAMES);
-    const applicantName = `${firstName} ${lastName}`;
+    let applicantName = `${firstName} ${lastName}`;
     const opposingName = rng.pick(OPPOSING_NAMES);
 
     // Chronology Dates:
     // Filing date: between 15 and 150 days before DEMO_SNAPSHOT_DATE
     const filingOffsetDays = rng.nextInt(15, 150);
-    const filingDate = addDays(DEMO_SNAPSHOT_DATE, -filingOffsetDays);
+    let filingDate = addDays(DEMO_SNAPSHOT_DATE, -filingOffsetDays);
 
     // Registration date: filingDate + 0 to 4 days
     const regOffset = rng.nextInt(0, 4);
-    const registrationDate = addDays(filingDate, regOffset);
+    let registrationDate = addDays(filingDate, regOffset);
 
     // Eligibility decision: registrationDate + 0 to 3 days
     const eligOffset = rng.nextInt(0, 3);
@@ -506,14 +506,60 @@ export function generateSyntheticCases(
       });
     }
 
+    // Injected realistic data-quality anomalies for live audit & operational triage
+    if (globalIndex === 42) {
+      // Priority 1 specific conflict: Filing date 27 Sept 2026, Hearing date 07 Sept 2026
+      filingDate = '2026-09-27';
+      const hearingIso = '2026-09-07';
+      firstHearingDate = hearingIso;
+      nextHearingDate = '০৭ সেপ্টেম্বর ২০২৬';
+      if (hearings.length === 0) {
+        hearings.push({
+          id: `HR-${id}-1`,
+          hearingId: `HR-${id}-1`,
+          caseId: id,
+          caseNumber,
+          court: `${distInfo.districtBn} ${courtName}`,
+          courtName: `${distInfo.districtBn} ${courtName}`,
+          benchCourtNumber: benchNumber,
+          district: distInfo.districtBn,
+          hearingDate: hearingIso,
+          hearingTime: '১০:৩০ পূর্বাহ্ণ',
+          presidingOfficer: 'বিজ্ঞ জেলা ও দায়রা জজ',
+          judgeName: 'বিজ্ঞ বিচারক',
+          date: '০৭ সেপ্টেম্বর ২০২৬',
+          isoDate: hearingIso,
+          time: '১০:৩০ পূর্বাহ্ণ',
+          purpose: 'প্রাথমিক শুনানি ও সমন জারির আদেশ',
+          status: 'নির্ধারিত',
+        });
+      } else {
+        hearings[0].isoDate = hearingIso;
+        hearings[0].date = '০৭ সেপ্টেম্বর ২০২৬';
+        hearings[0].hearingDate = hearingIso;
+      }
+    } else if (globalIndex === 85) {
+      // Registration before filing conflict
+      filingDate = '2026-08-20';
+      registrationDate = '2026-08-10';
+    } else if (globalIndex === 116) {
+      // Missing applicant name
+      applicantName = '';
+    } else if (globalIndex === 164) {
+      // Inconsistent district & upazila
+      upazila = 'সাভার'; // Mismatched for non-Dhaka
+    }
+
+    const applicantNid = (globalIndex === 211 || globalIndex === 212) ? '****-****-8842' : `****-****-${rng.nextInt(1000, 9999)}`;
+
     const partialCase: Partial<LegalAidCase> = {
       id,
       caseNumber,
       applicant: {
         id: `APP-${id}`,
         name: applicantName,
-        displayName: applicantName,
-        nidMasked: `****-****-${rng.nextInt(1000, 9999)}`,
+        displayName: applicantName || 'নামবিহীন আবেদনকারী',
+        nidMasked: applicantNid,
         phoneMasked: `০১৭**-***${rng.nextInt(100, 999)}`,
         gender: isFemaleApplicant ? 'নারী' : 'পুরুষ',
         age: rng.nextInt(20, 58),
@@ -530,7 +576,7 @@ export function generateSyntheticCases(
         opposingPartyAddress: `${upazila}, ${distInfo.districtBn}`,
       },
       category: catInfo.category,
-      summary: `${applicantName} বনাম ${opposingName}। বিষয়: ${catInfo.subcat} সংক্রান্ত সরকারি আইনি সহায়তা প্রার্থনা।`,
+      summary: `${applicantName || 'আবেদনকারী'} বনাম ${opposingName}। বিষয়: ${catInfo.subcat} সংক্রান্ত সরকারি আইনি সহায়তা প্রার্থনা।`,
       securityClassification: catInfo.sensitive ? 'Highly Sensitive' : 'Official',
       nextHearingDate,
       daysWithoutActivity,
