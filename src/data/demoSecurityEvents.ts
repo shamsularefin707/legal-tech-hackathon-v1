@@ -90,8 +90,12 @@ export function generateSyntheticSecurityEvents(
     const targetLawyer = rng.pick(lawyers);
 
     const day = rng.nextInt(1, 9);
-    const hour = rng.nextInt(8, 17);
-    const minute = rng.nextInt(10, 59);
+    let hour = rng.nextInt(8, 17);
+    let minute = rng.nextInt(10, 59);
+    if (day === 9) {
+      hour = rng.nextInt(8, 9); // strictly 08:xx or 09:xx so < 10:15:00 on SYSTEM_DATE
+      minute = rng.nextInt(10, 55);
+    }
 
     const timestamp = `২০২৬-০৯-${String(day).padStart(2, '0')} ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 

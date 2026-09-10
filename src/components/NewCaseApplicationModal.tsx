@@ -235,8 +235,14 @@ export const NewCaseApplicationModal: React.FC<NewCaseApplicationModalProps> = (
 
       addAuditLog({
         action: 'আবেদন দাখিল সম্পন্ন (CASE_APPLICATION_SUBMITTED)',
+        user: currentUser.name,
         actor: currentUser.name,
         role: currentUser.role,
+        resourceType: 'মামলা',
+        resourceId: newCase.id,
+        outcome: 'সফল',
+        ipAddress: '10.14.22.8',
+        districtScope: newCase.district,
         caseId: newCase.id,
         caseNumber: appId,
         district: newCase.district,

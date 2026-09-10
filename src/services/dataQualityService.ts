@@ -18,7 +18,24 @@ import {
   TOTAL_LAWYERS_TARGET,
   validateDistrictRelationship,
 } from '../data/demoConfig';
-import { DEMO_SNAPSHOT_DATE, isDateLte } from '../utils/dateUtils';
+import {
+  DEMO_SNAPSHOT_DATE,
+  SYSTEM_DATE,
+  SYSTEM_DATE_TIME,
+  isDateLte,
+  isTimestampLte,
+  parseBanglaOrIsoTimestamp,
+} from '../utils/dateUtils';
+
+export interface ChronologyValidationResult {
+  isValid: boolean;
+  maxCompletedTimestamp: string;
+  maxCompletedTimestampFormatted: string;
+  violationsCount: number;
+  errors: string[];
+  systemDateTime: string;
+  systemDate: string;
+}
 
 export interface DataQualityReport {
   dataQualityScore: number; // 0 - 100
@@ -40,9 +57,98 @@ export interface DataQualityReport {
     categoryQuotas: 'PASS' | 'FAIL';
   };
 
+  chronologyReport?: ChronologyValidationResult;
   validationErrors: string[];
   validationWarnings: string[];
   districtBreakdown: Record<string, { cases: number; lawyers: number; status: 'PASS' | 'FAIL' }>;
+}
+
+/**
+ * Validates chronology across cases and audit log events against canonical SYSTEM_DATE_TIME.
+ * Acceptance criterion: MAX(all_completed_event_timestamps) <= SYSTEM_DATE_TIME
+ */
+export function validateDatasetChronology(
+  cases: LegalAidCase[],
+  auditLogs: AuditLogEntry[],
+  systemDateTime: string = SYSTEM_DATE_TIME
+): ChronologyValidationResult {
+  const errors: string[] = [];
+  let maxTs = '';
+  const systemDate = systemDateTime.slice(0, 10);
+
+  // 1. Audit trail completed events
+  for (const log of auditLogs) {
+    const rawTs = log.isoTimestamp || log.timestamp;
+    const normTs = parseBanglaOrIsoTimestamp(rawTs);
+
+    if (normTs) {
+      if (!maxTs || normTs > maxTs) {
+        maxTs = normTs;
+      }
+      if (normTs > systemDateTime) {
+        errors.push(
+          `অডিট ট্রেইল কালানুক্রম লঙ্ঘন: ইভেন্ট [${log.id}] এর টাইমস্ট্যাম্প (${rawTs} -> ${normTs}) সিস্টেম ক্লক (${systemDateTime})-এর পরে।`
+        );
+      }
+    }
+  }
+
+  // 2. Case completed events and timeline records
+  for (const c of cases) {
+    // Milestones
+    if (c.filingDate && c.filingDate > systemDate) {
+      errors.push(`কেস ফাইলিং তারিখ লঙ্ঘন: মামলা ${c.caseNumber} এর ফাইলিং তারিখ (${c.filingDate}) সিস্টেম তারিখের (${systemDate}) পরে।`);
+    }
+    if (c.registrationDate && c.registrationDate > systemDate) {
+      errors.push(`কেস নিবন্ধন তারিখ লঙ্ঘন: মামলা ${c.caseNumber} এর নিবন্ধন তারিখ (${c.registrationDate}) সিস্টেম তারিখের (${systemDate}) পরে।`);
+    }
+    if (c.lawyerAssignmentDate && c.lawyerAssignmentDate > systemDate) {
+      errors.push(`আইনজীবী নিয়োগ তারিখ লঙ্ঘন: মামলা ${c.caseNumber} এর নিয়োগ তারিখ (${c.lawyerAssignmentDate}) সিস্টেম তারিখের (${systemDate}) পরে।`);
+    }
+    if (c.status === 'DISPOSED' && c.disposalDate && c.disposalDate > systemDate) {
+      errors.push(`কেস নিষ্পত্তি তারিখ লঙ্ঘন: মামলা ${c.caseNumber} এর নিষ্পত্তি তারিখ (${c.disposalDate}) সিস্টেম তারিখের (${systemDate}) পরে।`);
+    }
+
+    // Milestone progression: filingDate <= registrationDate <= lawyerAssignmentDate
+    if (c.filingDate && c.registrationDate && c.filingDate > c.registrationDate) {
+      errors.push(`কেস অগ্রগতি অসঙ্গতি: মামলা ${c.caseNumber}-এ দাখিলের তারিখ (${c.filingDate}) নিবন্ধনের (${c.registrationDate}) পরে।`);
+    }
+    if (c.registrationDate && c.lawyerAssignmentDate && c.registrationDate > c.lawyerAssignmentDate) {
+      errors.push(`কেস অগ্রগতি অসঙ্গতি: মামলা ${c.caseNumber}-এ নিবন্ধনের তারিখ (${c.registrationDate}) আইনজীবী নিয়োগের (${c.lawyerAssignmentDate}) পরে।`);
+    }
+
+    // Completed hearings
+    for (const h of c.hearings) {
+      const hDate = (h.isoDate || h.date).slice(0, 10);
+      if (h.status === 'COMPLETED' && hDate > systemDate) {
+        errors.push(`শুনানি সমাপ্তি লঙ্ঘন: মামলা ${c.caseNumber} এর সম্পন্ন শুনানি (${hDate}) সিস্টেম তারিখের (${systemDate}) পরে।`);
+      }
+    }
+
+    // Official timeline events
+    if (c.timeline) {
+      for (const tl of c.timeline) {
+        let tlDate = tl.isoDate ? tl.isoDate.slice(0, 10) : '';
+        if (!tlDate && tl.date) {
+          const parsed = parseBanglaOrIsoTimestamp(tl.date);
+          if (parsed) tlDate = parsed.slice(0, 10);
+        }
+        if (tl.isOfficialRecord && tlDate && tlDate > systemDate) {
+          errors.push(`টাইমলাইন ইভেন্ট লঙ্ঘন: মামলা ${c.caseNumber} এর ইভেন্ট (${tlDate}) সিস্টেম তারিখের (${systemDate}) পরে।`);
+        }
+      }
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    maxCompletedTimestamp: maxTs,
+    maxCompletedTimestampFormatted: maxTs,
+    violationsCount: errors.length,
+    errors,
+    systemDateTime,
+    systemDate,
+  };
 }
 
 export function validateCompleteDataset(
@@ -220,6 +326,13 @@ export function validateCompleteDataset(
     warnings.push(`নারী ও পরিবার ক্যাটাগরি কোটা ${womenRatio.toFixed(1)}% (লক্ষ্যমাত্রা: ৫৫-৬০%)।`);
   }
 
+  // 7. Chronology verification & acceptance check: MAX(all_completed_event_timestamps) <= SYSTEM_DATE_TIME
+  const chronologyReport = validateDatasetChronology(cases, auditLogs, SYSTEM_DATE_TIME);
+  if (!chronologyReport.isValid) {
+    checks.chronology = 'FAIL';
+    errors.push(...chronologyReport.errors);
+  }
+
   const dataQualityScore = errors.length === 0 ? 100 : Math.max(0, 100 - errors.length * 5);
 
   return {
@@ -231,6 +344,7 @@ export function validateCompleteDataset(
     totalVulnerabilities: vulnerabilities.length,
     totalAuditEvents: auditLogs.length,
     checks,
+    chronologyReport,
     validationErrors: errors,
     validationWarnings: warnings,
     districtBreakdown,

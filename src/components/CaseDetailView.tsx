@@ -1220,11 +1220,11 @@ export const CaseDetailView: React.FC = () => {
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                             dl.status === 'MET'
                               ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                              : dl.status === 'URGENT'
+                              : (dl.status === 'OVERDUE' || dl.category === 'URGENT')
                               ? 'bg-red-100 text-red-900 border border-red-300'
                               : 'bg-amber-100 text-amber-900 border border-amber-300'
                           }`}>
-                            {dl.status === 'MET' ? 'সম্পন্ন' : dl.status === 'URGENT' ? 'অতীব জরুরি' : 'চলমান'}
+                            {dl.status === 'MET' ? 'সম্পন্ন' : (dl.status === 'OVERDUE' || dl.category === 'URGENT') ? 'অতীব জরুরি' : 'চলমান'}
                           </span>
                         </td>
                       </tr>

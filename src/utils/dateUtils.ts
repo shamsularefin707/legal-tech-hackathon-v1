@@ -3,8 +3,13 @@
  * All timeline logic strictly enforces invariant checks relative to DEMO_SNAPSHOT_DATE.
  */
 
-export const DEMO_SNAPSHOT_DATE = '2026-09-09';
+export const SYSTEM_DATE = '2026-09-09';
+export const SYSTEM_DATE_TIME = '2026-09-09T10:15:00';
+export const DEMO_SNAPSHOT_DATE = SYSTEM_DATE;
 export const DEMO_DATA_SEED = 20260909;
+
+export const DEMO_CLOCK_DISPLAY_BN = '০৯ সেপ্টেম্বর ২০২৬, ১০:১৫ পূর্বাহ্ণ';
+export const DEMO_CLOCK_DISPLAY_EN = '09 September 2026, 10:15 AM';
 
 const BN_MONTHS = [
   'জানুয়ারি',
@@ -129,10 +134,65 @@ export function verifyChronologySequence(dates: (string | undefined | null)[]): 
 }
 
 export function getDemoTimestampString(): string {
-  const now = new Date();
-  const hh = now.getHours().toString().padStart(2, '0');
-  const mm = now.getMinutes().toString().padStart(2, '0');
-  const ss = now.getSeconds().toString().padStart(2, '0');
-  return `${toBanglaDigits(hh)}:${toBanglaDigits(mm)}:${toBanglaDigits(ss)}`;
+  return '১০:১৫:০০';
 }
+
+/**
+ * Normalizes any timestamp (Bangla readable or ISO or partial) to standard ISO string "YYYY-MM-DDTHH:mm:ss"
+ */
+export function parseBanglaOrIsoTimestamp(ts: string): string {
+  if (!ts) return '';
+  const eng = toEnglishDigits(ts.trim());
+
+  // Format 1: "YYYY-MM-DD HH:mm:ss" or "YYYY-MM-DDTHH:mm:ss" or "YYYY-MM-DD HH:mm"
+  const isoMatch = eng.match(/^(\d{4}-\d{2}-\d{2})[T\s](\d{2}:\d{2}(?::\d{2})?)/);
+  if (isoMatch) {
+    const datePart = isoMatch[1];
+    let timePart = isoMatch[2];
+    if (timePart.length === 5) timePart += ':00';
+    return `${datePart}T${timePart}`;
+  }
+
+  // Format 2: "DD Month YYYY, HH:mm:ss" or "DD Month YYYY" e.g. "০৯ সেপ্টেম্বর ২০২৬, ০৯:৫০:১২"
+  for (let mIdx = 0; mIdx < BN_MONTHS.length; mIdx++) {
+    const mName = BN_MONTHS[mIdx];
+    if (ts.includes(mName)) {
+      const matchWithTime = eng.match(/(\d{1,2})\s+[^,0-9]+\s+(\d{4}),?\s+(\d{2}:\d{2}(?::\d{2})?)/);
+      if (matchWithTime) {
+        const day = matchWithTime[1].padStart(2, '0');
+        const year = matchWithTime[2];
+        const month = String(mIdx + 1).padStart(2, '0');
+        let timePart = matchWithTime[3];
+        if (timePart.length === 5) timePart += ':00';
+        return `${year}-${month}-${day}T${timePart}`;
+      }
+      const matchDateOnly = eng.match(/(\d{1,2})\s+[^,0-9]+\s+(\d{4})/);
+      if (matchDateOnly) {
+        const day = matchDateOnly[1].padStart(2, '0');
+        const year = matchDateOnly[2];
+        const month = String(mIdx + 1).padStart(2, '0');
+        return `${year}-${month}-${day}T00:00:00`;
+      }
+    }
+  }
+
+  // Format 3: YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(eng)) {
+    return `${eng}T00:00:00`;
+  }
+
+  return eng;
+}
+
+/**
+ * Verifies if timestamp1 is less than or equal to timestamp2 (defaulting to SYSTEM_DATE_TIME)
+ */
+export function isTimestampLte(ts1?: string, maxTs: string = SYSTEM_DATE_TIME): boolean {
+  if (!ts1) return true;
+  const norm1 = parseBanglaOrIsoTimestamp(ts1);
+  const norm2 = parseBanglaOrIsoTimestamp(maxTs);
+  if (!norm1 || !norm2) return true;
+  return norm1 <= norm2;
+}
+
 

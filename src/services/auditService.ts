@@ -4,7 +4,7 @@
  */
 
 import { AuditLogEntry, AuditEventType } from '../types/legalAid';
-import { DEMO_SNAPSHOT_DATE } from '../utils/dateUtils';
+import { SYSTEM_DATE, SYSTEM_DATE_TIME } from '../utils/dateUtils';
 
 export function createAuditLogEntry(
   actor: { name: string; role: string; district?: string },
@@ -25,12 +25,12 @@ export function createAuditLogEntry(
 ): AuditLogEntry {
   const correlationId =
     extra?.correlationId || `corr-aud-${Math.floor(100000 + Math.random() * 900000)}`;
-  const nowDisplay = `${DEMO_SNAPSHOT_DATE} ১১:০০:০০`;
+  const nowDisplay = '০৯ সেপ্টেম্বর ২০২৬, ১০:১৫:০০';
 
   return {
     id: `AUD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     timestamp: nowDisplay,
-    isoTimestamp: `${DEMO_SNAPSHOT_DATE}T11:00:00`,
+    isoTimestamp: SYSTEM_DATE_TIME,
     user: actor.name,
     role: actor.role,
     action,
@@ -57,7 +57,7 @@ export function createAuditTrailEntry(
 ): AuditLogEntry {
   return {
     id: `aud-${Date.now().toString().slice(-6)}`,
-    timestamp: formattedDate || `${DEMO_SNAPSHOT_DATE} ১১:০০:০০`,
+    timestamp: formattedDate || '০৯ সেপ্টেম্বর ২০২৬, ১০:১৫:০০',
     ...entry,
   };
 }

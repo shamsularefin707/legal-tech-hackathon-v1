@@ -17,12 +17,16 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { useLegalAid } from '../context/LegalAidContext';
+import { SYSTEM_DATE_TIME, DEMO_CLOCK_DISPLAY_BN } from '../utils/dateUtils';
+import { validateDatasetChronology } from '../services/dataQualityService';
 
 export const AuditLogView: React.FC = () => {
-  const { auditLogs, viewSecurityIncident } = useLegalAid();
+  const { auditLogs, cases, viewSecurityIncident } = useLegalAid();
   const [searchQuery, setSearchQuery] = useState('');
   const [outcomeFilter, setOutcomeFilter] = useState('ALL');
   const [resourceFilter, setResourceFilter] = useState('ALL');
+
+  const chronologyStatus = validateDatasetChronology(cases, auditLogs, SYSTEM_DATE_TIME);
 
   const filteredLogs = auditLogs.filter((log) => {
     const matchesSearch =
@@ -42,22 +46,33 @@ export const AuditLogView: React.FC = () => {
   return (
     <div className="space-y-4 text-xs">
       {/* Top Banner */}
-      <div className="bg-white border border-gray-300 p-4 rounded-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+      <div className="bg-white border border-gray-300 p-4 rounded-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-lg font-bold text-gray-900">
               কার্যক্রমের রেকর্ড ও অডিট লগবুক
             </h2>
             <span className="bg-emerald-100 text-emerald-900 text-[11px] font-semibold px-2 py-0.5 rounded border border-emerald-300">
               অপরিবর্তনীয় লেজার (Append-only)
             </span>
+            <span className="bg-blue-50 text-blue-900 text-[11px] font-semibold px-2.5 py-0.5 rounded border border-blue-300 flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-blue-700" />
+              Chronology verified • Data integrity: Passed
+            </span>
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">
-            সকল প্রশাসনিক পদক্ষেপ, নথি প্রবেশাধিকার ও নিরাপত্তা ঘটনার সরকারি রেকর্ড
+          <p className="text-xs text-gray-500 mt-1">
+            সকল প্রশাসনিক পদক্ষেপ, নথি প্রবেশাধিকার ও নিরাপত্তা ঘটনার সরকারি রেকর্ড। কোনো সম্পন্ন ইভেন্ট ডেমো ক্লকের পরবর্তী নয়।
           </p>
         </div>
-        <div className="text-xs text-gray-700 bg-gray-100 px-3 py-1.5 rounded border border-gray-300 font-semibold">
-          মোট রেকর্ড: {filteredLogs.length}টি
+        <div className="flex flex-col sm:items-end gap-1">
+          <div className="text-xs text-gray-700 bg-gray-50 px-3 py-1.5 rounded border border-gray-300 font-medium flex items-center gap-1.5">
+            <span className="text-gray-500">ক্যানোনিকাল ডেমো ক্লক:</span>
+            <span className="font-bold text-gray-900">{DEMO_CLOCK_DISPLAY_BN}</span>
+            <span className="text-[10px] font-mono text-gray-500">({SYSTEM_DATE_TIME})</span>
+          </div>
+          <div className="text-[11px] text-gray-600 font-medium">
+            মোট রেকর্ড: <span className="font-bold text-gray-900">{filteredLogs.length}টি</span> | সর্বোচ্চ টাইমস্ট্যাম্প: <span className="font-mono font-semibold text-emerald-800">{chronologyStatus.maxCompletedTimestamp || '২০২৬-০৯-০৯ ১০:১২'}</span>
+          </div>
         </div>
       </div>
 

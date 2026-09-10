@@ -409,6 +409,12 @@ export interface AuditLogEntry {
   ipAddress: string;
   districtScope: string;
   details: string;
+  actor?: string;
+  resource?: string;
+  result?: string;
+  severity?: string;
+  caseNumber?: string;
+  district?: string;
   evidenceData?: {
     rawEndpoint?: string;
     requestMethod?: string;
@@ -474,6 +480,10 @@ export interface VulnerabilityLifecycleStage {
   actionTaken: string;
   status: 'COMPLETED' | 'IN_PROGRESS' | 'PENDING';
   evidenceRef: string;
+  labelBn?: string;
+  labelEn?: string;
+  details?: string;
+  actor?: string;
 }
 
 export interface VulnerabilityItem {
@@ -488,9 +498,15 @@ export interface VulnerabilityItem {
   sla?: string;
   slaHours: number;
   slaRemainingHours: number;
+  slaRemainingDays?: number;
   isSlaAtRisk?: boolean;
   description: string;
   riskScore?: number;
+  cvssScore?: number;
+  cweId?: string;
+  assignedTeam?: string;
+  discoveredAt?: string;
+  remediationSLA?: string;
   lifecycleStage?: LifecycleStageKey;
   identifiedAt: string;
   detectedAt?: string;
@@ -514,6 +530,7 @@ export type IncidentStatus =
 export interface SecurityIncident {
   id: string;
   incidentNumber: string;
+  title?: string;
   titleBn: string;
   titleEn: string;
   severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
@@ -523,6 +540,11 @@ export interface SecurityIncident {
   resourceId: string;
   resourceType: string;
   resourceTitle: string;
+  resourceName?: string;
+  caseNumber?: string;
+  ipAddress?: string;
+  evidenceDocumentId?: string;
+  remediationTaken?: string;
   actor: string;
   detectionReason: string;
   threatSummary: string;

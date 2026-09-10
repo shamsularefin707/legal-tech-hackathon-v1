@@ -262,10 +262,16 @@ export function generateSyntheticCases(
           todaysHearingsCreated < targetTodaysHearings &&
           hIdx === hearingCount - 1 &&
           !isDisposed &&
+          (!latestHearingDate || latestHearingDate < DEMO_SNAPSHOT_DATE) &&
           rng.next() < 0.35
         ) {
           hearingIso = DEMO_SNAPSHOT_DATE;
           todaysHearingsCreated++;
+        }
+
+        // Strict chronological invariant: hearingIso must be strictly after latestHearingDate
+        if (latestHearingDate && hearingIso <= latestHearingDate) {
+          hearingIso = addDays(latestHearingDate, rng.nextInt(7, 30));
         }
 
         const hStatusObj = deriveHearingStatus(hearingIso, DEMO_SNAPSHOT_DATE);
@@ -325,8 +331,8 @@ export function generateSyntheticCases(
       const baseDispDate = latestHearingDate || lawyerAssignmentDate || registrationDate;
       const dispOffset = rng.nextInt(2, 15);
       const computedDispDate = addDays(baseDispDate, dispOffset);
-      // Ensure disposalDate <= DEMO_SNAPSHOT_DATE
-      disposalDate = computedDispDate <= DEMO_SNAPSHOT_DATE ? computedDispDate : DEMO_SNAPSHOT_DATE;
+      // Ensure disposalDate is strictly prior to DEMO_SNAPSHOT_DATE (completed in past)
+      disposalDate = computedDispDate < DEMO_SNAPSHOT_DATE ? computedDispDate : addDays(DEMO_SNAPSHOT_DATE, -1);
       disposalReason = rng.pick([
         'আদালতের মাধ্যমে আপস-মীমাংসা ও দেনমোহর আদায় সম্পন্ন',
         'উভয় পক্ষের সম্মতিতে বিকল্প বিরোধ নিষ্পত্তি (এডিআর) চুক্তি স্বাক্ষরিত',
@@ -471,7 +477,7 @@ export function generateSyntheticCases(
     }
 
     for (const h of hearings) {
-      if (h.isoDate && h.isoDate <= DEMO_SNAPSHOT_DATE) {
+      if (h.isoDate && h.isoDate < DEMO_SNAPSHOT_DATE) {
         timeline.push({
           id: `TL-${h.id}`,
           date: h.date,

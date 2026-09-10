@@ -24,7 +24,13 @@ import { generateSyntheticCases } from './demoCases';
 import { generateSyntheticSecurityEvents } from './demoSecurityEvents';
 import { generateSyntheticVulnerabilities } from './demoVulnerabilities';
 import { validateCompleteDataset, DataQualityReport } from '../services/dataQualityService';
-import { DEMO_SNAPSHOT_DATE } from '../utils/dateUtils';
+import {
+  SYSTEM_DATE,
+  SYSTEM_DATE_TIME,
+  DEMO_SNAPSHOT_DATE,
+  isTimestampLte,
+  toEnglishDigits,
+} from '../utils/dateUtils';
 
 export interface CompleteDemoDataset {
   seed: number;
@@ -135,34 +141,134 @@ export function generateSyntheticAuditLogs(
     });
   });
 
-  // Sample case workflow audits
-  cases.slice(0, 40).forEach((c, idx) => {
-    const day = rng.nextInt(1, 10);
-    const hour = rng.nextInt(9, 16);
-    const minute = rng.nextInt(10, 50);
-    const timestamp = `২০২৬-০৯-${String(day).padStart(2, '0')} ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  // Helper to generate a valid chronological timestamp string strictly <= SYSTEM_DATE_TIME
+  const makeValidTimestamp = (isoDate: string, minHour: number = 9, maxHour: number = 16): string => {
+    const cleanDate = isoDate.slice(0, 10);
+    let hour = rng.nextInt(minHour, maxHour);
+    let minute = rng.nextInt(10, 50);
 
-    auditLogs.push({
-      id: `AUDIT-DEMO-CASE-${String(idx + 1).padStart(4, '0')}`,
-      timestamp,
-      user: c.assignedOfficerName,
-      role: 'DISTRICT_OFFICER',
-      action: c.assignedLawyerName
-        ? `আইনজীবী নিয়োগ অনুমোদন (${c.assignedLawyerName})`
-        : 'মামলার প্রাথমিক অগ্রাধিকার নির্ধারণ ও যাচাই',
-      eventType: c.assignedLawyerName ? 'LAWYER_ASSIGNED' : 'PRIORITY_CHANGED',
-      resourceType: 'মামলা',
-      resourceId: c.id,
-      outcome: 'সফল',
-      reason: 'আইনি সহায়তা বিধানাবলী অনুসারে দায়িত্ব বণ্টন',
-      correlationId: `corr-audit-${rng.nextInt(100000, 999999)}`,
-      ipAddress: `10.0.4.${rng.nextInt(10, 90)}`,
-      districtScope: c.district,
-      details: `মামলা নং: ${c.caseNumber} - বর্তমান অবস্থা: ${c.filingStage}`,
+    // If on SYSTEM_DATE, time must be strictly before 10:15:00
+    if (cleanDate === SYSTEM_DATE) {
+      hour = rng.nextInt(8, 9); // 08:xx or 09:xx
+      minute = rng.nextInt(10, 55);
+    } else if (cleanDate > SYSTEM_DATE) {
+      // Historical event cannot be in future! Clamp to past
+      return `২০২৬-০৯-০৮ ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+    }
+
+    const [y, m, d] = cleanDate.split('-');
+    return `${y}-${m}-${d} ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  };
+
+  // Sample case workflow audits strictly following case milestones
+  cases.slice(0, 45).forEach((c, idx) => {
+    // Milestone 1: Application Filing
+    if (c.filingDate && c.filingDate <= SYSTEM_DATE) {
+      auditLogs.push({
+        id: `AUDIT-DEMO-FILE-${String(idx + 1).padStart(4, '0')}`,
+        timestamp: makeValidTimestamp(c.filingDate, 9, 11),
+        user: 'নাগরিক সেবা ডেস্ক',
+        role: 'ASSISTANT_OFFICER',
+        action: 'আবেদন দাখিল ও প্রাথমিক তথ্য গ্রহণ',
+        eventType: 'CASE_CREATED',
+        resourceType: 'মামলা',
+        resourceId: c.id,
+        outcome: 'সফল',
+        reason: 'নাগরিকের আবেদনপত্র ও প্রাথমিক আর্থিক বিবরণী অন্তর্ভুক্ত',
+        correlationId: `corr-file-${rng.nextInt(100000, 999999)}`,
+        ipAddress: `10.0.4.${rng.nextInt(10, 90)}`,
+        districtScope: c.district,
+        details: `মামলা নং: ${c.caseNumber} - আবেদনকারী: ${c.applicantName}`,
+      });
+    }
+
+    // Milestone 2: Case Registration
+    if (c.registrationDate && c.registrationDate <= SYSTEM_DATE) {
+      auditLogs.push({
+        id: `AUDIT-DEMO-REG-${String(idx + 1).padStart(4, '0')}`,
+        timestamp: makeValidTimestamp(c.registrationDate, 11, 13),
+        user: c.assignedOfficerName,
+        role: 'DISTRICT_OFFICER',
+        action: 'মামলা নিবন্ধন ও যোগ্যতা যাচাই সম্পন্ন',
+        eventType: 'CASE_UPDATED',
+        resourceType: 'মামলা',
+        resourceId: c.id,
+        outcome: 'সফল',
+        reason: 'আইনি সহায়তা বিধিমালা মোতাবেক প্রাপ্যতা যাচাই ও নিবন্ধন',
+        correlationId: `corr-reg-${rng.nextInt(100000, 999999)}`,
+        ipAddress: `10.0.4.${rng.nextInt(10, 90)}`,
+        districtScope: c.district,
+        details: `মামলা নং: ${c.caseNumber} - ক্যাটাগরি: ${c.category}`,
+      });
+    }
+
+    // Milestone 3: Lawyer Assignment (if assigned)
+    if (c.lawyerAssignmentDate && c.lawyerAssignmentDate <= SYSTEM_DATE && c.assignedLawyerName) {
+      auditLogs.push({
+        id: `AUDIT-DEMO-LAW-${String(idx + 1).padStart(4, '0')}`,
+        timestamp: makeValidTimestamp(c.lawyerAssignmentDate, 14, 16),
+        user: c.assignedOfficerName,
+        role: 'DISTRICT_OFFICER',
+        action: `প্যানেল আইনজীবী নিয়োগ অনুমোদন (${c.assignedLawyerName})`,
+        eventType: 'LAWYER_ASSIGNED',
+        resourceType: 'মামলা',
+        resourceId: c.id,
+        outcome: 'সফল',
+        reason: 'বিশেষায়িত অভিজ্ঞতা ও কার্যভার সক্ষমতার ভিত্তিতে নিয়োগ',
+        correlationId: `corr-law-${rng.nextInt(100000, 999999)}`,
+        ipAddress: `10.0.4.${rng.nextInt(10, 90)}`,
+        districtScope: c.district,
+        details: `আইনজীবী: ${c.assignedLawyerName} - মামলা নং: ${c.caseNumber}`,
+      });
+    }
+
+    // Milestone 4: Completed Hearings
+    c.hearings.forEach((h, hIdx) => {
+      if (h.status === 'COMPLETED' && h.isoDate && h.isoDate <= SYSTEM_DATE) {
+        auditLogs.push({
+          id: `AUDIT-DEMO-HR-${String(idx + 1).padStart(3, '0')}-${hIdx + 1}`,
+          timestamp: makeValidTimestamp(h.isoDate, 10, 15),
+          user: c.assignedLawyerName || 'বিজ্ঞ প্যানেল আইনজীবী',
+          role: 'PANEL_LAWYER',
+          action: `আদালতে শুনানি সম্পন্নকরণ (${h.courtName})`,
+          eventType: 'CASE_UPDATED',
+          resourceType: 'মামলা',
+          resourceId: h.id,
+          outcome: 'সফল',
+          reason: h.purpose,
+          correlationId: `corr-hr-${rng.nextInt(100000, 999999)}`,
+          ipAddress: `10.0.4.${rng.nextInt(10, 90)}`,
+          districtScope: c.district,
+          details: `আদালত: ${h.courtName} - উদ্দেশ্য: ${h.purpose}`,
+        });
+      }
     });
+
+    // Milestone 5: Case Disposal (if disposed)
+    if (c.disposalDate && c.disposalDate <= SYSTEM_DATE) {
+      auditLogs.push({
+        id: `AUDIT-DEMO-DISP-${String(idx + 1).padStart(4, '0')}`,
+        timestamp: makeValidTimestamp(c.disposalDate, 14, 16),
+        user: c.assignedOfficerName,
+        role: 'DISTRICT_OFFICER',
+        action: 'মামলা নিষ্পত্তি ও নথি সমাপ্তি',
+        eventType: 'CASE_UPDATED',
+        resourceType: 'মামলা',
+        resourceId: c.id,
+        outcome: 'সফল',
+        reason: c.disposalReason || 'আদালতের মাধ্যমে চূড়ান্ত নিষ্পত্তি',
+        correlationId: `corr-disp-${rng.nextInt(100000, 999999)}`,
+        ipAddress: `10.0.4.${rng.nextInt(10, 90)}`,
+        districtScope: c.district,
+        details: `মামলা নং: ${c.caseNumber} - সমাপ্তির কারণ: ${c.disposalReason || 'নিষ্পত্তি'}`,
+      });
+    }
   });
 
-  return auditLogs.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  // Strict acceptance filter: ensure every audit event timestamp is <= SYSTEM_DATE_TIME
+  const filtered = auditLogs.filter((log) => isTimestampLte(log.timestamp, SYSTEM_DATE_TIME));
+
+  return filtered.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 }
 
 /**
